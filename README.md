@@ -17,6 +17,14 @@ Anime Daily is in early development. Its gameplay, data pipeline, and supporting
 - Deterministic validation of factual game answers
 - A responsive web experience with clear daily results
 
+## Planned Comparison Modes
+
+- **Higher Score:** Choose which anime has the higher user score.
+- **More Popular:** Choose which anime has more members or users.
+- **More Episodes:** Choose which anime has the larger episode count.
+- **More Recent:** Choose which anime aired or was released more recently.
+- **Longer Runtime:** For anime movies only, choose which movie has the longer runtime.
+
 ## Planned Architecture / Technology
 
 - Python for data processing and deterministic game logic
