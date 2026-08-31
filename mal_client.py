@@ -1,4 +1,5 @@
 import os
+import time
 
 import httpx
 from dotenv import load_dotenv
@@ -11,12 +12,56 @@ if mal_client_id is None:
     raise RuntimeError("MAL_CLIENT_ID is missing from .env")
 
 
-def fetch_anime(anime_id):
-    url = f"https://api.myanimelist.net/v2/anime/{anime_id}"
+MAX_REQUEST_ATTEMPTS = 3
+_anime_cache = {}
+_related_anime_cache = {}
 
+
+def _request_mal(url, params):
     headers = {
         "X-MAL-CLIENT-ID": mal_client_id,
     }
+
+    for attempt_number in range(1, MAX_REQUEST_ATTEMPTS + 1):
+        try:
+            response = httpx.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=10.0,
+                follow_redirects=True,
+            )
+
+            response.raise_for_status()
+            return response
+
+        except httpx.HTTPStatusError as error:
+            status_code = error.response.status_code
+            is_server_error = 500 <= status_code < 600
+
+            if is_server_error and attempt_number < MAX_REQUEST_ATTEMPTS:
+                time.sleep(attempt_number)
+                continue
+
+            print(f"MAL API returned an error: {status_code}")
+            return None
+
+        except httpx.RequestError as error:
+            if attempt_number < MAX_REQUEST_ATTEMPTS:
+                time.sleep(attempt_number)
+                continue
+
+            print(f"Request failed: {error}")
+            return None
+
+    return None
+
+
+def fetch_anime(anime_id):
+    if anime_id in _anime_cache:
+        return _anime_cache[anime_id]
+
+    url = f"https://api.myanimelist.net/v2/anime/{anime_id}"
 
     params = {
         "fields": (
@@ -25,22 +70,9 @@ def fetch_anime(anime_id):
         )
     }
 
-    try:
-        response = httpx.get(
-            url,
-            headers=headers,
-            params=params,
-            timeout=10.0,
-        )
+    response = _request_mal(url, params)
 
-        response.raise_for_status()
-
-    except httpx.HTTPStatusError as error:
-        print(f"MAL API returned an error: {error.response.status_code}")
-        return None
-
-    except httpx.RequestError as error:
-        print(f"Request failed: {error}")
+    if response is None:
         return None
 
     data = response.json()
@@ -64,36 +96,24 @@ def fetch_anime(anime_id):
         "runtime_minutes": runtime_minutes,
     }
 
+    _anime_cache[anime_id] = anime
+
     return anime
 
 
 def fetch_related_anime(anime_id):
-    url = f"https://api.myanimelist.net/v2/anime/{anime_id}"
+    if anime_id in _related_anime_cache:
+        return _related_anime_cache[anime_id]
 
-    headers = {
-        "X-MAL-CLIENT-ID": mal_client_id,
-    }
+    url = f"https://api.myanimelist.net/v2/anime/{anime_id}"
 
     params = {
         "fields": "related_anime",
     }
 
-    try:
-        response = httpx.get(
-            url,
-            headers=headers,
-            params=params,
-            timeout=10.0,
-        )
+    response = _request_mal(url, params)
 
-        response.raise_for_status()
-
-    except httpx.HTTPStatusError as error:
-        print(f"MAL API returned an error: {error.response.status_code}")
-        return None
-
-    except httpx.RequestError as error:
-        print(f"Request failed: {error}")
+    if response is None:
         return None
 
     data = response.json()
@@ -107,6 +127,8 @@ def fetch_related_anime(anime_id):
                 "relation_type": relation["relation_type"],
             }
         )
+
+    _related_anime_cache[anime_id] = related_anime
 
     return related_anime
 
@@ -126,13 +148,10 @@ def fetch_series_episode_count(anime_id):
 
         anime = fetch_anime(current_anime_id)
 
-        if anime is not None and anime["type"] in [
-            "tv",
-            "ona",
-            "ova",
-            "special",
-            "tv_special",
-        ]:
+        if anime is None:
+            return None
+
+        if anime["type"] in ["tv", "ona", "ova", "special", "tv_special"]:
             entry_episodes = anime["entry_episodes"]
 
             if entry_episodes is not None:
@@ -141,7 +160,7 @@ def fetch_series_episode_count(anime_id):
         related_anime = fetch_related_anime(current_anime_id)
 
         if related_anime is None:
-            continue
+            return None
 
         for relation in related_anime:
             if relation["relation_type"] in ["prequel", "sequel"]:
