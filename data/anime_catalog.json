@@ -9,7 +9,8 @@
     "release_date": "1998-04-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/19644l.webp"
   },
   {
     "mal_id": 5,
@@ -21,7 +22,8 @@
     "release_date": "2001-09-01",
     "type": "movie",
     "runtime_minutes": 115,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1439/93480l.webp"
   },
   {
     "mal_id": 6,
@@ -33,7 +35,8 @@
     "release_date": "1998-04-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1130/120002l.jpg"
   },
   {
     "mal_id": 19,
@@ -45,7 +48,8 @@
     "release_date": "2004-04-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 74
+    "series_episodes": 74,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/18793l.jpg"
   },
   {
     "mal_id": 20,
@@ -57,7 +61,8 @@
     "release_date": "2002-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 1013
+    "series_episodes": 1013,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1141/142503l.jpg"
   },
   {
     "mal_id": 21,
@@ -69,7 +74,8 @@
     "release_date": "1999-10-20",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1244/138851l.jpg"
   },
   {
     "mal_id": 30,
@@ -81,7 +87,8 @@
     "release_date": "1995-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1314/108941l.webp"
   },
   {
     "mal_id": 32,
@@ -93,7 +100,8 @@
     "release_date": "1997-07-19",
     "type": "movie",
     "runtime_minutes": 86,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1404/98182l.webp"
   },
   {
     "mal_id": 33,
@@ -105,7 +113,8 @@
     "release_date": "1997-10-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 49
+    "series_episodes": 49,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1384/119988l.webp"
   },
   {
     "mal_id": 43,
@@ -117,7 +126,8 @@
     "release_date": "1995-11-18",
     "type": "movie",
     "runtime_minutes": 82,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/82594l.jpg"
   },
   {
     "mal_id": 47,
@@ -129,7 +139,8 @@
     "release_date": "1988-07-16",
     "type": "movie",
     "runtime_minutes": 124,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1408/114012l.webp"
   },
   {
     "mal_id": 121,
@@ -141,7 +152,8 @@
     "release_date": "2003-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 51
+    "series_episodes": 51,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/75815l.webp"
   },
   {
     "mal_id": 164,
@@ -153,7 +165,8 @@
     "release_date": "1997-07-12",
     "type": "movie",
     "runtime_minutes": 133,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1355/147277l.jpg"
   },
   {
     "mal_id": 199,
@@ -165,7 +178,8 @@
     "release_date": "2001-07-20",
     "type": "movie",
     "runtime_minutes": 124,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/79597l.webp"
   },
   {
     "mal_id": 205,
@@ -177,7 +191,8 @@
     "release_date": "2004-05-20",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1370/135212l.jpg"
   },
   {
     "mal_id": 223,
@@ -189,7 +204,8 @@
     "release_date": "1986-02-26",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 668
+    "series_episodes": 668,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1887/92364l.jpg"
   },
   {
     "mal_id": 226,
@@ -201,7 +217,8 @@
     "release_date": "2004-07-25",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1780/121555l.webp"
   },
   {
     "mal_id": 227,
@@ -213,7 +230,8 @@
     "release_date": "2000-04-26",
     "type": "ova",
     "runtime_minutes": 25,
-    "series_episodes": 6
+    "series_episodes": 6,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/77356l.jpg"
   },
   {
     "mal_id": 235,
@@ -225,7 +243,8 @@
     "release_date": "1996-01-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/75199l.jpg"
   },
   {
     "mal_id": 245,
@@ -237,7 +256,8 @@
     "release_date": "1999-06-30",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/11460l.jpg"
   },
   {
     "mal_id": 249,
@@ -249,7 +269,8 @@
     "release_date": "2000-10-16",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 241
+    "series_episodes": 241,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1589/95329l.webp"
   },
   {
     "mal_id": 263,
@@ -261,7 +282,8 @@
     "release_date": "2000-10-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 128
+    "series_episodes": 128,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/86334l.jpg"
   },
   {
     "mal_id": 269,
@@ -273,7 +295,8 @@
     "release_date": "2004-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 416
+    "series_episodes": 416,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1541/147774l.jpg"
   },
   {
     "mal_id": 270,
@@ -285,7 +308,8 @@
     "release_date": "2001-10-11",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/19956l.jpg"
   },
   {
     "mal_id": 339,
@@ -297,7 +321,8 @@
     "release_date": "1998-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1718/91550l.webp"
   },
   {
     "mal_id": 356,
@@ -309,7 +334,8 @@
     "release_date": "2006-01-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/30327l.jpg"
   },
   {
     "mal_id": 392,
@@ -321,7 +347,8 @@
     "release_date": "1992-10-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 113
+    "series_episodes": 113,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1228/111372l.webp"
   },
   {
     "mal_id": 431,
@@ -333,7 +360,8 @@
     "release_date": "2004-11-20",
     "type": "movie",
     "runtime_minutes": 119,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1470/138723l.jpg"
   },
   {
     "mal_id": 437,
@@ -345,7 +373,8 @@
     "release_date": "1998-02-28",
     "type": "movie",
     "runtime_minutes": 81,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1254/134212l.webp"
   },
   {
     "mal_id": 457,
@@ -357,7 +386,8 @@
     "release_date": "2005-10-23",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/73862l.jpg"
   },
   {
     "mal_id": 523,
@@ -369,7 +399,8 @@
     "release_date": "1988-04-16",
     "type": "movie",
     "runtime_minutes": 86,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1110/147278l.webp"
   },
   {
     "mal_id": 572,
@@ -381,7 +412,8 @@
     "release_date": "1984-03-11",
     "type": "movie",
     "runtime_minutes": 117,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/75914l.webp"
   },
   {
     "mal_id": 578,
@@ -393,7 +425,8 @@
     "release_date": "1988-04-16",
     "type": "movie",
     "runtime_minutes": 88,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1485/141208l.webp"
   },
   {
     "mal_id": 777,
@@ -405,7 +438,8 @@
     "release_date": "2006-02-10",
     "type": "ova",
     "runtime_minutes": 49,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1012/143965l.jpg"
   },
   {
     "mal_id": 790,
@@ -417,7 +451,8 @@
     "release_date": "2006-02-25",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1183/136187l.webp"
   },
   {
     "mal_id": 813,
@@ -429,7 +464,8 @@
     "release_date": "1989-04-26",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 668
+    "series_episodes": 668,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1277/142022l.jpg"
   },
   {
     "mal_id": 849,
@@ -441,7 +477,8 @@
     "release_date": "2006-04-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 28
+    "series_episodes": 28,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1470/137929l.webp"
   },
   {
     "mal_id": 853,
@@ -453,7 +490,8 @@
     "release_date": "2006-04-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/71992l.webp"
   },
   {
     "mal_id": 877,
@@ -465,7 +503,8 @@
     "release_date": "2006-04-05",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 47
+    "series_episodes": 47,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/11232l.webp"
   },
   {
     "mal_id": 889,
@@ -477,7 +516,8 @@
     "release_date": "2006-04-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 29
+    "series_episodes": 29,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1906/121592l.jpg"
   },
   {
     "mal_id": 918,
@@ -489,7 +529,8 @@
     "release_date": "2006-04-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 369
+    "series_episodes": 369,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/73274l.webp"
   },
   {
     "mal_id": 934,
@@ -501,7 +542,8 @@
     "release_date": "2006-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 94
+    "series_episodes": 94,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/19634l.jpg"
   },
   {
     "mal_id": 1195,
@@ -513,7 +555,8 @@
     "release_date": "2006-07-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 49
+    "series_episodes": 49,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/20680l.jpg"
   },
   {
     "mal_id": 1210,
@@ -525,7 +568,8 @@
     "release_date": "2006-07-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/52675l.jpg"
   },
   {
     "mal_id": 1365,
@@ -537,7 +581,8 @@
     "release_date": "2002-04-20",
     "type": "movie",
     "runtime_minutes": 107,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1400/94320l.webp"
   },
   {
     "mal_id": 1482,
@@ -549,7 +594,8 @@
     "release_date": "2006-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/75194l.webp"
   },
   {
     "mal_id": 1535,
@@ -561,7 +607,8 @@
     "release_date": "2006-10-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1079/138100l.webp"
   },
   {
     "mal_id": 1575,
@@ -573,7 +620,8 @@
     "release_date": "2006-10-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1032/135088l.jpg"
   },
   {
     "mal_id": 1689,
@@ -585,7 +633,8 @@
     "release_date": "2007-03-03",
     "type": "movie",
     "runtime_minutes": 22,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1410/112994l.jpg"
   },
   {
     "mal_id": 1735,
@@ -597,7 +646,8 @@
     "release_date": "2007-02-15",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 1013
+    "series_episodes": 1013,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1565/111305l.webp"
   },
   {
     "mal_id": 1818,
@@ -609,7 +659,8 @@
     "release_date": "2007-04-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/21834l.webp"
   },
   {
     "mal_id": 1887,
@@ -621,7 +672,8 @@
     "release_date": "2007-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1561/115660l.webp"
   },
   {
     "mal_id": 2001,
@@ -633,7 +685,8 @@
     "release_date": "2007-04-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 27
+    "series_episodes": 27,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/5123l.webp"
   },
   {
     "mal_id": 2025,
@@ -645,7 +698,8 @@
     "release_date": "2007-04-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 41
+    "series_episodes": 41,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/19570l.webp"
   },
   {
     "mal_id": 2167,
@@ -657,7 +711,8 @@
     "release_date": "2007-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 47
+    "series_episodes": 47,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1804/95033l.webp"
   },
   {
     "mal_id": 2236,
@@ -669,7 +724,8 @@
     "release_date": "2006-07-15",
     "type": "movie",
     "runtime_minutes": 98,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1/2432l.webp"
   },
   {
     "mal_id": 2251,
@@ -681,7 +737,8 @@
     "release_date": "2007-07-27",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 16
+    "series_episodes": 16,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/14547l.jpg"
   },
   {
     "mal_id": 2476,
@@ -693,7 +750,8 @@
     "release_date": "2007-07-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1593/122440l.jpg"
   },
   {
     "mal_id": 2904,
@@ -705,7 +763,8 @@
     "release_date": "2008-04-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1088/135089l.webp"
   },
   {
     "mal_id": 2966,
@@ -717,7 +776,8 @@
     "release_date": "2008-01-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/59401l.webp"
   },
   {
     "mal_id": 2993,
@@ -729,7 +789,8 @@
     "release_date": "2008-01-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/75242l.jpg"
   },
   {
     "mal_id": 3588,
@@ -741,7 +802,8 @@
     "release_date": "2008-04-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 51
+    "series_episodes": 51,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1071/149486l.jpg"
   },
   {
     "mal_id": 3784,
@@ -753,7 +815,8 @@
     "release_date": "2009-06-27",
     "type": "movie",
     "runtime_minutes": 112,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/74983l.jpg"
   },
   {
     "mal_id": 3786,
@@ -765,7 +828,8 @@
     "release_date": "2021-03-08",
     "type": "movie",
     "runtime_minutes": 155,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1422/113533l.webp"
   },
   {
     "mal_id": 4181,
@@ -777,7 +841,8 @@
     "release_date": "2008-10-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 47
+    "series_episodes": 47,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1299/110774l.jpg"
   },
   {
     "mal_id": 4224,
@@ -789,7 +854,8 @@
     "release_date": "2008-10-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/22128l.jpg"
   },
   {
     "mal_id": 4282,
@@ -801,7 +867,8 @@
     "release_date": "2008-08-16",
     "type": "movie",
     "runtime_minutes": 114,
-    "series_episodes": 1
+    "series_episodes": 1,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1574/112838l.jpg"
   },
   {
     "mal_id": 4565,
@@ -813,7 +880,8 @@
     "release_date": "2009-04-22",
     "type": "movie",
     "runtime_minutes": 125,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/19698l.webp"
   },
   {
     "mal_id": 4654,
@@ -825,7 +893,8 @@
     "release_date": "2008-10-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 74
+    "series_episodes": 74,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/75533l.webp"
   },
   {
     "mal_id": 4898,
@@ -837,7 +906,8 @@
     "release_date": "2008-10-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 72
+    "series_episodes": 72,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1467/137783l.webp"
   },
   {
     "mal_id": 4921,
@@ -849,7 +919,8 @@
     "release_date": "1993-01-15",
     "type": "movie",
     "runtime_minutes": 135,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1070/104671l.jpg"
   },
   {
     "mal_id": 5081,
@@ -861,7 +932,8 @@
     "release_date": "2009-07-03",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/75274l.jpg"
   },
   {
     "mal_id": 5114,
@@ -873,7 +945,8 @@
     "release_date": "2009-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 64
+    "series_episodes": 64,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1208/94745l.jpg"
   },
   {
     "mal_id": 5205,
@@ -885,7 +958,8 @@
     "release_date": "2009-08-08",
     "type": "movie",
     "runtime_minutes": 121,
-    "series_episodes": 1
+    "series_episodes": 1,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/56619l.jpg"
   },
   {
     "mal_id": 5680,
@@ -897,7 +971,8 @@
     "release_date": "2009-04-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 39
+    "series_episodes": 39,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/76120l.jpg"
   },
   {
     "mal_id": 6045,
@@ -909,7 +984,8 @@
     "release_date": "2009-10-07",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 43
+    "series_episodes": 43,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1502/124384l.jpg"
   },
   {
     "mal_id": 6547,
@@ -921,7 +997,8 @@
     "release_date": "2010-04-03",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1244/111115l.webp"
   },
   {
     "mal_id": 6675,
@@ -933,7 +1010,8 @@
     "release_date": "2009-08-14",
     "type": "movie",
     "runtime_minutes": 102,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/28553l.webp"
   },
   {
     "mal_id": 6702,
@@ -945,7 +1023,8 @@
     "release_date": "2009-10-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 353
+    "series_episodes": 353,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/18179l.webp"
   },
   {
     "mal_id": 6746,
@@ -957,7 +1036,8 @@
     "release_date": "2010-01-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 60
+    "series_episodes": 60,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/71772l.jpg"
   },
   {
     "mal_id": 6880,
@@ -969,7 +1049,8 @@
     "release_date": "2011-04-17",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/75299l.webp"
   },
   {
     "mal_id": 7054,
@@ -981,7 +1062,8 @@
     "release_date": "2010-04-02",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/25254l.jpg"
   },
   {
     "mal_id": 7311,
@@ -993,7 +1075,8 @@
     "release_date": "2010-02-06",
     "type": "movie",
     "runtime_minutes": 161,
-    "series_episodes": 28
+    "series_episodes": 28,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1248/112352l.jpg"
   },
   {
     "mal_id": 7472,
@@ -1005,7 +1088,8 @@
     "release_date": "2010-04-24",
     "type": "movie",
     "runtime_minutes": 95,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/28803l.webp"
   },
   {
     "mal_id": 7791,
@@ -1017,7 +1101,8 @@
     "release_date": "2010-04-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 39
+    "series_episodes": 39,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/76121l.jpg"
   },
   {
     "mal_id": 8074,
@@ -1029,7 +1114,8 @@
     "release_date": "2010-07-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/78311l.jpg"
   },
   {
     "mal_id": 8769,
@@ -1041,7 +1127,8 @@
     "release_date": "2010-10-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 32
+    "series_episodes": 32,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1508/129576l.jpg"
   },
   {
     "mal_id": 9253,
@@ -1053,7 +1140,8 @@
     "release_date": "2011-04-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1935/127974l.webp"
   },
   {
     "mal_id": 9260,
@@ -1065,7 +1153,8 @@
     "release_date": "2016-01-08",
     "type": "movie",
     "runtime_minutes": 63,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1783/112810l.jpg"
   },
   {
     "mal_id": 9617,
@@ -1077,7 +1166,8 @@
     "release_date": "2011-12-03",
     "type": "movie",
     "runtime_minutes": 110,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/76233l.jpg"
   },
   {
     "mal_id": 9756,
@@ -1089,7 +1179,8 @@
     "release_date": "2011-01-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/55225l.webp"
   },
   {
     "mal_id": 9919,
@@ -1101,7 +1192,8 @@
     "release_date": "2011-04-17",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 73
+    "series_episodes": 73,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/75195l.webp"
   },
   {
     "mal_id": 9989,
@@ -1113,7 +1205,8 @@
     "release_date": "2011-04-15",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 11
+    "series_episodes": 11,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/79697l.jpg"
   },
   {
     "mal_id": 10087,
@@ -1125,7 +1218,8 @@
     "release_date": "2011-10-02",
     "type": "tv",
     "runtime_minutes": 27,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1887/117644l.webp"
   },
   {
     "mal_id": 10165,
@@ -1137,7 +1231,8 @@
     "release_date": "2011-04-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 27
+    "series_episodes": 27,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/75617l.webp"
   },
   {
     "mal_id": 10408,
@@ -1149,7 +1244,8 @@
     "release_date": "2011-09-17",
     "type": "movie",
     "runtime_minutes": 45,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1599/112267l.jpg"
   },
   {
     "mal_id": 10534,
@@ -1161,7 +1257,8 @@
     "release_date": "2011-03-05",
     "type": "movie",
     "runtime_minutes": 108,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/72436l.webp"
   },
   {
     "mal_id": 10620,
@@ -1173,7 +1270,8 @@
     "release_date": "2011-10-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 27
+    "series_episodes": 27,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/33465l.webp"
   },
   {
     "mal_id": 10719,
@@ -1185,7 +1283,8 @@
     "release_date": "2011-10-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/32873l.webp"
   },
   {
     "mal_id": 10793,
@@ -1197,7 +1296,8 @@
     "release_date": "2011-10-14",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1566/133912l.jpg"
   },
   {
     "mal_id": 11061,
@@ -1209,7 +1309,8 @@
     "release_date": "2011-10-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 148
+    "series_episodes": 148,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1337/99013l.jpg"
   },
   {
     "mal_id": 11111,
@@ -1221,7 +1322,8 @@
     "release_date": "2012-01-10",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/75509l.webp"
   },
   {
     "mal_id": 11577,
@@ -1233,7 +1335,8 @@
     "release_date": "2013-04-20",
     "type": "movie",
     "runtime_minutes": 90,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1611/112806l.jpg"
   },
   {
     "mal_id": 11597,
@@ -1245,7 +1348,8 @@
     "release_date": "2012-01-08",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1044/103654l.jpg"
   },
   {
     "mal_id": 11617,
@@ -1257,7 +1361,8 @@
     "release_date": "2012-01-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 53
+    "series_episodes": 53,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1331/111940l.jpg"
   },
   {
     "mal_id": 11633,
@@ -1269,7 +1374,8 @@
     "release_date": "2013-07-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 11
+    "series_episodes": 11,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/47677l.webp"
   },
   {
     "mal_id": 11741,
@@ -1281,7 +1387,8 @@
     "release_date": "2012-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1522/117645l.jpg"
   },
   {
     "mal_id": 11757,
@@ -1293,7 +1400,8 @@
     "release_date": "2012-07-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 99
+    "series_episodes": 99,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/39717l.jpg"
   },
   {
     "mal_id": 11759,
@@ -1305,7 +1413,8 @@
     "release_date": "2012-04-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1002/135430l.jpg"
   },
   {
     "mal_id": 11771,
@@ -1317,7 +1426,8 @@
     "release_date": "2012-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 76
+    "series_episodes": 76,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/50453l.webp"
   },
   {
     "mal_id": 11843,
@@ -1329,7 +1439,8 @@
     "release_date": "2012-01-10",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/33257l.webp"
   },
   {
     "mal_id": 11887,
@@ -1341,7 +1452,8 @@
     "release_date": "2012-07-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 17
+    "series_episodes": 17,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/39665l.webp"
   },
   {
     "mal_id": 11979,
@@ -1353,7 +1465,8 @@
     "release_date": "2012-10-13",
     "type": "movie",
     "runtime_minutes": 111,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/42265l.jpg"
   },
   {
     "mal_id": 11981,
@@ -1365,7 +1478,8 @@
     "release_date": "2013-10-26",
     "type": "movie",
     "runtime_minutes": 116,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/54231l.webp"
   },
   {
     "mal_id": 12189,
@@ -1377,7 +1491,8 @@
     "release_date": "2012-04-23",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 22
+    "series_episodes": 22,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/50521l.jpg"
   },
   {
     "mal_id": 12355,
@@ -1389,7 +1504,8 @@
     "release_date": "2012-07-21",
     "type": "movie",
     "runtime_minutes": 117,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/35721l.webp"
   },
   {
     "mal_id": 13125,
@@ -1401,7 +1517,8 @@
     "release_date": "2012-09-29",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1549/136389l.webp"
   },
   {
     "mal_id": 13601,
@@ -1413,7 +1530,8 @@
     "release_date": "2012-10-12",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 44
+    "series_episodes": 44,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1314/142015l.webp"
   },
   {
     "mal_id": 13759,
@@ -1425,7 +1543,8 @@
     "release_date": "2012-10-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/43643l.webp"
   },
   {
     "mal_id": 14227,
@@ -1437,7 +1556,8 @@
     "release_date": "2012-10-02",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/39779l.jpg"
   },
   {
     "mal_id": 14289,
@@ -1449,7 +1569,8 @@
     "release_date": "2012-10-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 14
+    "series_episodes": 14,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/39777l.webp"
   },
   {
     "mal_id": 14345,
@@ -1461,7 +1582,8 @@
     "release_date": "2012-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/40977l.webp"
   },
   {
     "mal_id": 14467,
@@ -1473,7 +1595,8 @@
     "release_date": "2012-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/47607l.webp"
   },
   {
     "mal_id": 14513,
@@ -1485,7 +1608,8 @@
     "release_date": "2012-10-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/42773l.jpg"
   },
   {
     "mal_id": 14713,
@@ -1497,7 +1621,8 @@
     "release_date": "2012-10-02",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 30
+    "series_episodes": 30,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/85429l.jpg"
   },
   {
     "mal_id": 14719,
@@ -1509,7 +1634,8 @@
     "release_date": "2012-10-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 190
+    "series_episodes": 190,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/40409l.jpg"
   },
   {
     "mal_id": 14741,
@@ -1521,7 +1647,8 @@
     "release_date": "2012-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1905/142840l.webp"
   },
   {
     "mal_id": 14813,
@@ -1533,7 +1660,8 @@
     "release_date": "2013-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1786/120117l.jpg"
   },
   {
     "mal_id": 15335,
@@ -1545,7 +1673,8 @@
     "release_date": "2013-07-06",
     "type": "movie",
     "runtime_minutes": 110,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/51723l.webp"
   },
   {
     "mal_id": 15451,
@@ -1557,7 +1686,8 @@
     "release_date": "2013-07-07",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 53
+    "series_episodes": 53,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/47729l.webp"
   },
   {
     "mal_id": 15583,
@@ -1569,7 +1699,8 @@
     "release_date": "2013-04-06",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 59
+    "series_episodes": 59,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/44844l.webp"
   },
   {
     "mal_id": 15809,
@@ -1581,7 +1712,8 @@
     "release_date": "2013-04-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/50177l.webp"
   },
   {
     "mal_id": 16498,
@@ -1593,7 +1725,8 @@
     "release_date": "2013-04-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/47347l.webp"
   },
   {
     "mal_id": 16592,
@@ -1605,7 +1738,8 @@
     "release_date": "2013-07-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/51463l.webp"
   },
   {
     "mal_id": 16742,
@@ -1617,7 +1751,8 @@
     "release_date": "2013-07-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/51619l.webp"
   },
   {
     "mal_id": 16782,
@@ -1629,7 +1764,8 @@
     "release_date": "2013-05-31",
     "type": "movie",
     "runtime_minutes": 46,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1597/112995l.jpg"
   },
   {
     "mal_id": 16894,
@@ -1641,7 +1777,8 @@
     "release_date": "2013-10-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 76
+    "series_episodes": 76,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/56155l.webp"
   },
   {
     "mal_id": 17074,
@@ -1653,7 +1790,8 @@
     "release_date": "2013-07-07",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1807/121534l.jpg"
   },
   {
     "mal_id": 17265,
@@ -1665,7 +1803,8 @@
     "release_date": "2013-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/84004l.jpg"
   },
   {
     "mal_id": 17895,
@@ -1677,7 +1816,8 @@
     "release_date": "2013-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/52091l.webp"
   },
   {
     "mal_id": 18115,
@@ -1689,7 +1829,8 @@
     "release_date": "2013-10-06",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/55039l.webp"
   },
   {
     "mal_id": 18153,
@@ -1701,7 +1842,8 @@
     "release_date": "2013-10-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/85468l.jpg"
   },
   {
     "mal_id": 18507,
@@ -1713,7 +1855,8 @@
     "release_date": "2013-07-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/51107l.jpg"
   },
   {
     "mal_id": 18671,
@@ -1725,7 +1868,8 @@
     "release_date": "2014-01-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/56643l.webp"
   },
   {
     "mal_id": 18679,
@@ -1737,7 +1881,8 @@
     "release_date": "2013-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1464/111943l.jpg"
   },
   {
     "mal_id": 18897,
@@ -1749,7 +1894,8 @@
     "release_date": "2014-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 32
+    "series_episodes": 32,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/75587l.webp"
   },
   {
     "mal_id": 19815,
@@ -1761,7 +1907,8 @@
     "release_date": "2014-04-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1074/111944l.jpg"
   },
   {
     "mal_id": 20507,
@@ -1773,7 +1920,8 @@
     "release_date": "2014-01-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1886/128266l.jpg"
   },
   {
     "mal_id": 20583,
@@ -1785,7 +1933,8 @@
     "release_date": "2014-04-06",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/76014l.webp"
   },
   {
     "mal_id": 20785,
@@ -1797,7 +1946,8 @@
     "release_date": "2014-04-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 53
+    "series_episodes": 53,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/61039l.jpg"
   },
   {
     "mal_id": 20787,
@@ -1809,7 +1959,8 @@
     "release_date": "2014-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1292/94693l.webp"
   },
   {
     "mal_id": 20899,
@@ -1821,7 +1972,8 @@
     "release_date": "2014-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 190
+    "series_episodes": 190,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/55267l.webp"
   },
   {
     "mal_id": 21881,
@@ -1833,7 +1985,8 @@
     "release_date": "2014-07-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 99
+    "series_episodes": 99,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1223/121999l.jpg"
   },
   {
     "mal_id": 21899,
@@ -1845,7 +1998,8 @@
     "release_date": "2012-08-26",
     "type": "movie",
     "runtime_minutes": 96,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1172/90571l.webp"
   },
   {
     "mal_id": 21995,
@@ -1857,7 +2011,8 @@
     "release_date": "2014-07-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/64813l.webp"
   },
   {
     "mal_id": 22043,
@@ -1869,7 +2024,8 @@
     "release_date": "2014-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 353
+    "series_episodes": 353,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/60551l.jpg"
   },
   {
     "mal_id": 22147,
@@ -1881,7 +2037,8 @@
     "release_date": "2014-10-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 14
+    "series_episodes": 14,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/85435l.webp"
   },
   {
     "mal_id": 22199,
@@ -1893,7 +2050,8 @@
     "release_date": "2014-07-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1429/95946l.jpg"
   },
   {
     "mal_id": 22297,
@@ -1905,7 +2063,8 @@
     "release_date": "2014-10-12",
     "type": "tv",
     "runtime_minutes": 28,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/67333l.jpg"
   },
   {
     "mal_id": 22319,
@@ -1917,7 +2076,8 @@
     "release_date": "2014-07-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1498/134443l.webp"
   },
   {
     "mal_id": 22535,
@@ -1929,7 +2089,8 @@
     "release_date": "2014-10-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/73178l.webp"
   },
   {
     "mal_id": 22789,
@@ -1941,7 +2102,8 @@
     "release_date": "2014-07-06",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1426/111248l.jpg"
   },
   {
     "mal_id": 23233,
@@ -1953,7 +2115,8 @@
     "release_date": "2015-01-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 22
+    "series_episodes": 22,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1654/112033l.jpg"
   },
   {
     "mal_id": 23273,
@@ -1965,7 +2128,8 @@
     "release_date": "2014-10-10",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1405/143284l.jpg"
   },
   {
     "mal_id": 23277,
@@ -1977,7 +2141,8 @@
     "release_date": "2015-01-16",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1329/142757l.webp"
   },
   {
     "mal_id": 23283,
@@ -1989,7 +2154,8 @@
     "release_date": "2014-07-11",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 11
+    "series_episodes": 11,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1417/117422l.jpg"
   },
   {
     "mal_id": 23289,
@@ -2001,7 +2167,8 @@
     "release_date": "2014-07-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/66083l.jpg"
   },
   {
     "mal_id": 23755,
@@ -2013,7 +2180,8 @@
     "release_date": "2014-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 137
+    "series_episodes": 137,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/65409l.webp"
   },
   {
     "mal_id": 23847,
@@ -2025,7 +2193,8 @@
     "release_date": "2015-04-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/75376l.webp"
   },
   {
     "mal_id": 24415,
@@ -2037,7 +2206,8 @@
     "release_date": "2015-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 76
+    "series_episodes": 76,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/68299l.jpg"
   },
   {
     "mal_id": 24439,
@@ -2049,7 +2219,8 @@
     "release_date": "2015-04-05",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1449/142053l.jpg"
   },
   {
     "mal_id": 24703,
@@ -2061,7 +2232,8 @@
     "release_date": "2015-04-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 53
+    "series_episodes": 53,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/73642l.webp"
   },
   {
     "mal_id": 24833,
@@ -2073,7 +2245,8 @@
     "release_date": "2015-01-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/75639l.webp"
   },
   {
     "mal_id": 25013,
@@ -2085,7 +2258,8 @@
     "release_date": "2014-10-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/64225l.webp"
   },
   {
     "mal_id": 25157,
@@ -2097,7 +2271,8 @@
     "release_date": "2014-10-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/67795l.webp"
   },
   {
     "mal_id": 25777,
@@ -2109,7 +2284,8 @@
     "release_date": "2017-04-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/84177l.jpg"
   },
   {
     "mal_id": 26055,
@@ -2121,7 +2297,8 @@
     "release_date": "2015-01-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 190
+    "series_episodes": 190,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/75045l.webp"
   },
   {
     "mal_id": 26243,
@@ -2133,7 +2310,8 @@
     "release_date": "2015-04-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1879/148979l.webp"
   },
   {
     "mal_id": 27775,
@@ -2145,7 +2323,8 @@
     "release_date": "2015-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/72750l.webp"
   },
   {
     "mal_id": 27787,
@@ -2157,7 +2336,8 @@
     "release_date": "2015-04-10",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 32
+    "series_episodes": 32,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/72626l.webp"
   },
   {
     "mal_id": 27899,
@@ -2169,7 +2349,8 @@
     "release_date": "2015-01-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1889/123307l.webp"
   },
   {
     "mal_id": 28121,
@@ -2181,7 +2362,8 @@
     "release_date": "2015-04-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 74
+    "series_episodes": 74,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1172/148981l.jpg"
   },
   {
     "mal_id": 28171,
@@ -2193,7 +2375,8 @@
     "release_date": "2015-04-04",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 88
+    "series_episodes": 88,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1444/148976l.webp"
   },
   {
     "mal_id": 28223,
@@ -2205,7 +2388,8 @@
     "release_date": "2015-01-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/71553l.jpg"
   },
   {
     "mal_id": 28297,
@@ -2217,7 +2401,8 @@
     "release_date": "2015-04-09",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/69455l.webp"
   },
   {
     "mal_id": 28623,
@@ -2229,7 +2414,8 @@
     "release_date": "2016-04-08",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/79164l.jpg"
   },
   {
     "mal_id": 28677,
@@ -2241,7 +2427,8 @@
     "release_date": "2015-04-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/73700l.webp"
   },
   {
     "mal_id": 28701,
@@ -2253,7 +2440,8 @@
     "release_date": "2015-04-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1881/124810l.webp"
   },
   {
     "mal_id": 28825,
@@ -2265,7 +2453,8 @@
     "release_date": "2015-07-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/75086l.webp"
   },
   {
     "mal_id": 28851,
@@ -2277,7 +2466,8 @@
     "release_date": "2016-09-17",
     "type": "movie",
     "runtime_minutes": 130,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1122/96435l.webp"
   },
   {
     "mal_id": 28891,
@@ -2289,7 +2479,8 @@
     "release_date": "2015-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/76662l.jpg"
   },
   {
     "mal_id": 28907,
@@ -2301,7 +2492,8 @@
     "release_date": "2015-07-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/76222l.webp"
   },
   {
     "mal_id": 28927,
@@ -2313,7 +2505,8 @@
     "release_date": "2015-10-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/76632l.webp"
   },
   {
     "mal_id": 28957,
@@ -2325,7 +2518,8 @@
     "release_date": "2015-05-16",
     "type": "movie",
     "runtime_minutes": 47,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/72689l.webp"
   },
   {
     "mal_id": 28977,
@@ -2337,7 +2531,8 @@
     "release_date": "2015-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 369
+    "series_episodes": 369,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/72078l.jpg"
   },
   {
     "mal_id": 28999,
@@ -2349,7 +2544,8 @@
     "release_date": "2015-07-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1826/147276l.jpg"
   },
   {
     "mal_id": 29786,
@@ -2361,7 +2557,8 @@
     "release_date": "2015-07-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/75106l.jpg"
   },
   {
     "mal_id": 29803,
@@ -2373,7 +2570,8 @@
     "release_date": "2015-07-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 52
+    "series_episodes": 52,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1945/136600l.webp"
   },
   {
     "mal_id": 30015,
@@ -2385,7 +2583,8 @@
     "release_date": "2016-07-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 17
+    "series_episodes": 17,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/82149l.webp"
   },
   {
     "mal_id": 30123,
@@ -2397,7 +2596,8 @@
     "release_date": "2015-07-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/75764l.webp"
   },
   {
     "mal_id": 30240,
@@ -2409,7 +2609,8 @@
     "release_date": "2015-07-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1286/112161l.jpg"
   },
   {
     "mal_id": 30276,
@@ -2421,7 +2622,8 @@
     "release_date": "2015-10-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/76049l.webp"
   },
   {
     "mal_id": 30296,
@@ -2433,7 +2635,8 @@
     "release_date": "2015-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/76493l.webp"
   },
   {
     "mal_id": 30307,
@@ -2445,7 +2648,8 @@
     "release_date": "2015-07-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/9/75104l.webp"
   },
   {
     "mal_id": 30484,
@@ -2457,7 +2661,8 @@
     "release_date": "2018-04-12",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1375/93521l.jpg"
   },
   {
     "mal_id": 30503,
@@ -2469,7 +2674,8 @@
     "release_date": "2015-10-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1689/94850l.webp"
   },
   {
     "mal_id": 30544,
@@ -2481,7 +2687,8 @@
     "release_date": "2015-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/76034l.webp"
   },
   {
     "mal_id": 30654,
@@ -2493,7 +2700,8 @@
     "release_date": "2016-01-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/77966l.jpg"
   },
   {
     "mal_id": 30694,
@@ -2505,7 +2713,8 @@
     "release_date": "2015-07-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 131
+    "series_episodes": 131,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/74606l.webp"
   },
   {
     "mal_id": 30831,
@@ -2517,7 +2726,8 @@
     "release_date": "2016-01-14",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 31
+    "series_episodes": 31,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1895/142748l.jpg"
   },
   {
     "mal_id": 31043,
@@ -2529,7 +2739,8 @@
     "release_date": "2016-01-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/77957l.jpg"
   },
   {
     "mal_id": 31240,
@@ -2541,7 +2752,8 @@
     "release_date": "2016-04-04",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 85
+    "series_episodes": 85,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1522/128039l.webp"
   },
   {
     "mal_id": 31478,
@@ -2553,7 +2765,8 @@
     "release_date": "2016-04-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 60
+    "series_episodes": 60,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/79409l.jpg"
   },
   {
     "mal_id": 31646,
@@ -2565,7 +2778,8 @@
     "release_date": "2016-10-08",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 44
+    "series_episodes": 44,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/82899l.jpg"
   },
   {
     "mal_id": 31722,
@@ -2577,7 +2791,8 @@
     "release_date": "2016-08-28",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 137
+    "series_episodes": 137,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/79331l.webp"
   },
   {
     "mal_id": 31757,
@@ -2589,7 +2804,8 @@
     "release_date": "2016-08-19",
     "type": "movie",
     "runtime_minutes": 68,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1981/112812l.webp"
   },
   {
     "mal_id": 31758,
@@ -2601,7 +2817,8 @@
     "release_date": "2017-01-06",
     "type": "movie",
     "runtime_minutes": 82,
-    "series_episodes": 116
+    "series_episodes": 116,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1084/112813l.webp"
   },
   {
     "mal_id": 31765,
@@ -2613,7 +2830,8 @@
     "release_date": "2017-02-18",
     "type": "movie",
     "runtime_minutes": 119,
-    "series_episodes": 99
+    "series_episodes": 99,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1557/123313l.jpg"
   },
   {
     "mal_id": 31798,
@@ -2625,7 +2843,8 @@
     "release_date": "2016-04-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1085/147246l.jpg"
   },
   {
     "mal_id": 31859,
@@ -2637,7 +2856,8 @@
     "release_date": "2016-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/77976l.webp"
   },
   {
     "mal_id": 31933,
@@ -2649,7 +2869,8 @@
     "release_date": "2016-04-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 190
+    "series_episodes": 190,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/79156l.jpg"
   },
   {
     "mal_id": 31964,
@@ -2661,7 +2882,8 @@
     "release_date": "2016-04-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/10/78745l.webp"
   },
   {
     "mal_id": 32182,
@@ -2673,7 +2895,8 @@
     "release_date": "2016-07-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/80356l.jpg"
   },
   {
     "mal_id": 32281,
@@ -2685,7 +2908,8 @@
     "release_date": "2016-08-26",
     "type": "movie",
     "runtime_minutes": 106,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/87048l.webp"
   },
   {
     "mal_id": 32282,
@@ -2697,7 +2921,8 @@
     "release_date": "2016-07-02",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 88
+    "series_episodes": 88,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/79353l.webp"
   },
   {
     "mal_id": 32542,
@@ -2709,7 +2934,8 @@
     "release_date": "2016-04-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/79468l.webp"
   },
   {
     "mal_id": 32615,
@@ -2721,7 +2947,8 @@
     "release_date": "2017-01-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/82890l.jpg"
   },
   {
     "mal_id": 32729,
@@ -2733,7 +2960,8 @@
     "release_date": "2016-07-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1415/102477l.jpg"
   },
   {
     "mal_id": 32867,
@@ -2745,7 +2973,8 @@
     "release_date": "2016-10-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 60
+    "series_episodes": 60,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1572/133096l.webp"
   },
   {
     "mal_id": 32901,
@@ -2757,7 +2986,8 @@
     "release_date": "2017-04-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/86468l.webp"
   },
   {
     "mal_id": 32935,
@@ -2769,7 +2999,8 @@
     "release_date": "2016-10-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/81992l.webp"
   },
   {
     "mal_id": 32937,
@@ -2781,7 +3012,8 @@
     "release_date": "2017-01-12",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 31
+    "series_episodes": 31,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/83188l.webp"
   },
   {
     "mal_id": 32949,
@@ -2793,7 +3025,8 @@
     "release_date": "2017-01-13",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/83937l.jpg"
   },
   {
     "mal_id": 32951,
@@ -2805,7 +3038,8 @@
     "release_date": "2017-04-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/8/85593l.jpg"
   },
   {
     "mal_id": 32995,
@@ -2817,7 +3051,8 @@
     "release_date": "2016-10-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/81149l.webp"
   },
   {
     "mal_id": 32998,
@@ -2829,7 +3064,8 @@
     "release_date": "2016-07-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/13/80515l.jpg"
   },
   {
     "mal_id": 33049,
@@ -2841,7 +3077,8 @@
     "release_date": "2019-01-12",
     "type": "movie",
     "runtime_minutes": 117,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1974/98158l.webp"
   },
   {
     "mal_id": 33050,
@@ -2853,7 +3090,8 @@
     "release_date": "2020-08-15",
     "type": "movie",
     "runtime_minutes": 122,
-    "series_episodes": 75
+    "series_episodes": 75,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1142/112957l.jpg"
   },
   {
     "mal_id": 33206,
@@ -2865,7 +3103,8 @@
     "release_date": "2017-01-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/85434l.jpg"
   },
   {
     "mal_id": 33255,
@@ -2877,7 +3116,8 @@
     "release_date": "2016-07-04",
     "type": "tv",
     "runtime_minutes": 5,
-    "series_episodes": 151
+    "series_episodes": 151,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1973/142750l.webp"
   },
   {
     "mal_id": 33352,
@@ -2889,7 +3129,8 @@
     "release_date": "2018-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1795/95088l.webp"
   },
   {
     "mal_id": 33486,
@@ -2901,7 +3142,8 @@
     "release_date": "2017-04-01",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/85221l.jpg"
   },
   {
     "mal_id": 33487,
@@ -2913,7 +3155,8 @@
     "release_date": "2017-01-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/83709l.webp"
   },
   {
     "mal_id": 33489,
@@ -2925,7 +3168,8 @@
     "release_date": "2017-01-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1520/147248l.jpg"
   },
   {
     "mal_id": 33506,
@@ -2937,7 +3181,8 @@
     "release_date": "2017-01-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 73
+    "series_episodes": 73,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/85201l.jpg"
   },
   {
     "mal_id": 33674,
@@ -2949,7 +3194,8 @@
     "release_date": "2017-07-15",
     "type": "movie",
     "runtime_minutes": 106,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1085/90759l.webp"
   },
   {
     "mal_id": 34134,
@@ -2961,7 +3207,8 @@
     "release_date": "2019-04-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1247/122044l.jpg"
   },
   {
     "mal_id": 34280,
@@ -2973,7 +3220,8 @@
     "release_date": "2017-07-13",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/4/86828l.webp"
   },
   {
     "mal_id": 34542,
@@ -2985,7 +3233,8 @@
     "release_date": "2017-10-13",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 11
+    "series_episodes": 11,
+    "image_url": "https://cdn.myanimelist.net/images/anime/7/88471l.jpg"
   },
   {
     "mal_id": 34566,
@@ -2997,7 +3246,8 @@
     "release_date": "2017-04-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 1013
+    "series_episodes": 1013,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1091/99847l.jpg"
   },
   {
     "mal_id": 34572,
@@ -3009,7 +3259,8 @@
     "release_date": "2017-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 170
+    "series_episodes": 170,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/88336l.jpg"
   },
   {
     "mal_id": 34577,
@@ -3021,7 +3272,8 @@
     "release_date": "2018-01-13",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 137
+    "series_episodes": 137,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/90089l.jpg"
   },
   {
     "mal_id": 34599,
@@ -3033,7 +3285,8 @@
     "release_date": "2017-07-07",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/86733l.webp"
   },
   {
     "mal_id": 34612,
@@ -3045,7 +3298,8 @@
     "release_date": "2018-01-17",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 151
+    "series_episodes": 151,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1961/91383l.webp"
   },
   {
     "mal_id": 34618,
@@ -3057,7 +3311,8 @@
     "release_date": "2017-10-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/6/88286l.jpg"
   },
   {
     "mal_id": 34902,
@@ -3069,7 +3324,8 @@
     "release_date": "2017-07-04",
     "type": "tv",
     "runtime_minutes": 12,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/12/86676l.webp"
   },
   {
     "mal_id": 34933,
@@ -3081,7 +3337,8 @@
     "release_date": "2017-07-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/86578l.jpg"
   },
   {
     "mal_id": 35062,
@@ -3093,7 +3350,8 @@
     "release_date": "2017-10-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/88476l.webp"
   },
   {
     "mal_id": 35073,
@@ -3105,7 +3363,8 @@
     "release_date": "2018-01-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 52
+    "series_episodes": 52,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1212/113415l.webp"
   },
   {
     "mal_id": 35120,
@@ -3117,7 +3376,8 @@
     "release_date": "2018-01-05",
     "type": "ona",
     "runtime_minutes": 24,
-    "series_episodes": 10
+    "series_episodes": 10,
+    "image_url": "https://cdn.myanimelist.net/images/anime/2/89973l.jpg"
   },
   {
     "mal_id": 35507,
@@ -3129,7 +3389,8 @@
     "release_date": "2017-07-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 54
+    "series_episodes": 54,
+    "image_url": "https://cdn.myanimelist.net/images/anime/5/86830l.jpg"
   },
   {
     "mal_id": 35760,
@@ -3141,7 +3402,8 @@
     "release_date": "2018-07-23",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1173/92110l.webp"
   },
   {
     "mal_id": 35788,
@@ -3153,7 +3415,8 @@
     "release_date": "2017-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 88
+    "series_episodes": 88,
+    "image_url": "https://cdn.myanimelist.net/images/anime/3/88434l.webp"
   },
   {
     "mal_id": 35790,
@@ -3165,7 +3428,8 @@
     "release_date": "2019-01-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1490/101365l.webp"
   },
   {
     "mal_id": 35849,
@@ -3177,7 +3441,8 @@
     "release_date": "2018-01-13",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1614/90408l.webp"
   },
   {
     "mal_id": 35851,
@@ -3189,7 +3454,8 @@
     "release_date": "2018-02-24",
     "type": "movie",
     "runtime_minutes": 114,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/11/89556l.jpg"
   },
   {
     "mal_id": 35968,
@@ -3201,7 +3467,8 @@
     "release_date": "2018-04-13",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 14
+    "series_episodes": 14,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1864/93518l.webp"
   },
   {
     "mal_id": 35994,
@@ -3213,7 +3480,8 @@
     "release_date": "2018-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 16
+    "series_episodes": 16,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1862/95624l.jpg"
   },
   {
     "mal_id": 36098,
@@ -3225,7 +3493,8 @@
     "release_date": "2018-09-01",
     "type": "movie",
     "runtime_minutes": 108,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1768/93291l.jpg"
   },
   {
     "mal_id": 36456,
@@ -3237,7 +3506,8 @@
     "release_date": "2018-04-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1319/92084l.jpg"
   },
   {
     "mal_id": 36474,
@@ -3249,7 +3519,8 @@
     "release_date": "2018-10-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 99
+    "series_episodes": 99,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1993/93837l.webp"
   },
   {
     "mal_id": 36511,
@@ -3261,7 +3532,8 @@
     "release_date": "2018-04-03",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1063/95086l.webp"
   },
   {
     "mal_id": 36538,
@@ -3273,7 +3545,8 @@
     "release_date": "2018-09-29",
     "type": "movie",
     "runtime_minutes": 104,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1250/94846l.jpg"
   },
   {
     "mal_id": 36649,
@@ -3285,7 +3558,8 @@
     "release_date": "2018-07-06",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1190/93472l.webp"
   },
   {
     "mal_id": 36862,
@@ -3297,7 +3571,8 @@
     "release_date": "2020-01-17",
     "type": "movie",
     "runtime_minutes": 105,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1803/117183l.jpg"
   },
   {
     "mal_id": 36882,
@@ -3309,7 +3584,8 @@
     "release_date": "2019-07-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 42
+    "series_episodes": 42,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1776/97682l.jpg"
   },
   {
     "mal_id": 36885,
@@ -3321,7 +3597,8 @@
     "release_date": "2019-10-26",
     "type": "movie",
     "runtime_minutes": 114,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1671/111411l.webp"
   },
   {
     "mal_id": 36896,
@@ -3333,7 +3610,8 @@
     "release_date": "2018-08-03",
     "type": "movie",
     "runtime_minutes": 96,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1736/93138l.webp"
   },
   {
     "mal_id": 36949,
@@ -3345,7 +3623,8 @@
     "release_date": "2018-04-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 88
+    "series_episodes": 88,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1604/93531l.webp"
   },
   {
     "mal_id": 37086,
@@ -3357,7 +3636,8 @@
     "release_date": "2019-01-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1496/96519l.jpg"
   },
   {
     "mal_id": 37105,
@@ -3369,7 +3649,8 @@
     "release_date": "2018-07-14",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 36
+    "series_episodes": 36,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1302/94882l.jpg"
   },
   {
     "mal_id": 37141,
@@ -3381,7 +3662,8 @@
     "release_date": "2018-07-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 21
+    "series_episodes": 21,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1141/117446l.jpg"
   },
   {
     "mal_id": 37210,
@@ -3393,7 +3675,8 @@
     "release_date": "2018-07-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 22
+    "series_episodes": 22,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1649/93412l.jpg"
   },
   {
     "mal_id": 37347,
@@ -3405,7 +3688,8 @@
     "release_date": "2019-07-13",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 74
+    "series_episodes": 74,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1730/101329l.webp"
   },
   {
     "mal_id": 37349,
@@ -3417,7 +3701,8 @@
     "release_date": "2018-10-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1719/95621l.webp"
   },
   {
     "mal_id": 37430,
@@ -3429,7 +3714,8 @@
     "release_date": "2018-10-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 96
+    "series_episodes": 96,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1069/123309l.webp"
   },
   {
     "mal_id": 37450,
@@ -3441,7 +3727,8 @@
     "release_date": "2018-10-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1301/93586l.webp"
   },
   {
     "mal_id": 37510,
@@ -3453,7 +3740,8 @@
     "release_date": "2019-01-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1918/96303l.webp"
   },
   {
     "mal_id": 37515,
@@ -3465,7 +3753,8 @@
     "release_date": "2019-01-18",
     "type": "movie",
     "runtime_minutes": 105,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1336/95168l.jpg"
   },
   {
     "mal_id": 37520,
@@ -3477,7 +3766,8 @@
     "release_date": "2019-01-07",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1879/100467l.jpg"
   },
   {
     "mal_id": 37521,
@@ -3489,7 +3779,8 @@
     "release_date": "2019-07-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1500/103005l.webp"
   },
   {
     "mal_id": 37675,
@@ -3501,7 +3792,8 @@
     "release_date": "2018-07-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 52
+    "series_episodes": 52,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1511/93473l.webp"
   },
   {
     "mal_id": 37779,
@@ -3513,7 +3805,8 @@
     "release_date": "2019-01-11",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1830/118780l.jpg"
   },
   {
     "mal_id": 37799,
@@ -3525,7 +3818,8 @@
     "release_date": "2018-10-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1545/121995l.webp"
   },
   {
     "mal_id": 37982,
@@ -3537,7 +3831,8 @@
     "release_date": "2019-01-12",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1021/95670l.jpg"
   },
   {
     "mal_id": 37987,
@@ -3549,7 +3844,8 @@
     "release_date": "2020-09-18",
     "type": "movie",
     "runtime_minutes": 140,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1825/110716l.jpg"
   },
   {
     "mal_id": 37991,
@@ -3561,7 +3857,8 @@
     "release_date": "2018-10-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 190
+    "series_episodes": 190,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1882/94989l.webp"
   },
   {
     "mal_id": 37999,
@@ -3573,7 +3870,8 @@
     "release_date": "2019-01-12",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1295/106551l.jpg"
   },
   {
     "mal_id": 38000,
@@ -3585,7 +3883,8 @@
     "release_date": "2019-04-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1286/99889l.jpg"
   },
   {
     "mal_id": 38003,
@@ -3597,7 +3896,8 @@
     "release_date": "2019-04-12",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 60
+    "series_episodes": 60,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1037/100463l.webp"
   },
   {
     "mal_id": 38040,
@@ -3609,7 +3909,8 @@
     "release_date": "2019-08-30",
     "type": "movie",
     "runtime_minutes": 90,
-    "series_episodes": 31
+    "series_episodes": 31,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1638/119321l.webp"
   },
   {
     "mal_id": 38101,
@@ -3621,7 +3922,8 @@
     "release_date": "2019-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1819/97947l.jpg"
   },
   {
     "mal_id": 38329,
@@ -3633,7 +3935,8 @@
     "release_date": "2019-06-15",
     "type": "movie",
     "runtime_minutes": 90,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1613/102179l.jpg"
   },
   {
     "mal_id": 38408,
@@ -3645,7 +3948,8 @@
     "release_date": "2019-10-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1412/107914l.webp"
   },
   {
     "mal_id": 38475,
@@ -3657,7 +3961,8 @@
     "release_date": "2022-07-01",
     "type": "movie",
     "runtime_minutes": 120,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1806/124396l.jpg"
   },
   {
     "mal_id": 38524,
@@ -3669,7 +3974,8 @@
     "release_date": "2019-04-29",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1517/100633l.webp"
   },
   {
     "mal_id": 38659,
@@ -3681,7 +3987,8 @@
     "release_date": "2019-10-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1715/103419l.webp"
   },
   {
     "mal_id": 38671,
@@ -3693,7 +4000,8 @@
     "release_date": "2019-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 73
+    "series_episodes": 73,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1664/103275l.webp"
   },
   {
     "mal_id": 38680,
@@ -3705,7 +4013,8 @@
     "release_date": "2019-04-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1447/99827l.webp"
   },
   {
     "mal_id": 38691,
@@ -3717,7 +4026,8 @@
     "release_date": "2019-07-05",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 95
+    "series_episodes": 95,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1613/102576l.jpg"
   },
   {
     "mal_id": 38826,
@@ -3729,7 +4039,8 @@
     "release_date": "2019-07-19",
     "type": "movie",
     "runtime_minutes": 112,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1880/101146l.jpg"
   },
   {
     "mal_id": 38883,
@@ -3741,7 +4052,8 @@
     "release_date": "2020-01-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1813/105367l.jpg"
   },
   {
     "mal_id": 39167,
@@ -3753,7 +4065,8 @@
     "release_date": "2023-10-06",
     "type": "movie",
     "runtime_minutes": 54,
-    "series_episodes": 15
+    "series_episodes": 15,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1652/138188l.webp"
   },
   {
     "mal_id": 39195,
@@ -3765,7 +4078,8 @@
     "release_date": "2019-10-10",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1713/145599l.webp"
   },
   {
     "mal_id": 39486,
@@ -3777,7 +4091,8 @@
     "release_date": "2021-01-08",
     "type": "movie",
     "runtime_minutes": 104,
-    "series_episodes": 369
+    "series_episodes": 369,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1245/116760l.jpg"
   },
   {
     "mal_id": 39535,
@@ -3789,7 +4104,8 @@
     "release_date": "2021-01-11",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1530/117776l.webp"
   },
   {
     "mal_id": 39547,
@@ -3801,7 +4117,8 @@
     "release_date": "2020-07-10",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1958/107912l.webp"
   },
   {
     "mal_id": 39551,
@@ -3813,7 +4130,8 @@
     "release_date": "2021-01-12",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 96
+    "series_episodes": 96,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1271/109841l.webp"
   },
   {
     "mal_id": 39587,
@@ -3825,7 +4143,8 @@
     "release_date": "2020-07-08",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 85
+    "series_episodes": 85,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1444/108005l.jpg"
   },
   {
     "mal_id": 39597,
@@ -3837,7 +4156,8 @@
     "release_date": "2019-10-13",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 99
+    "series_episodes": 99,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1630/103417l.webp"
   },
   {
     "mal_id": 39617,
@@ -3849,7 +4169,8 @@
     "release_date": "2021-01-08",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1815/110626l.webp"
   },
   {
     "mal_id": 39701,
@@ -3861,7 +4182,8 @@
     "release_date": "2019-10-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 137
+    "series_episodes": 137,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1546/103418l.webp"
   },
   {
     "mal_id": 39741,
@@ -3873,7 +4195,8 @@
     "release_date": "2019-09-06",
     "type": "movie",
     "runtime_minutes": 91,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1667/112943l.webp"
   },
   {
     "mal_id": 39783,
@@ -3885,7 +4208,8 @@
     "release_date": "2021-01-08",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1775/109514l.jpg"
   },
   {
     "mal_id": 40028,
@@ -3897,7 +4221,8 @@
     "release_date": "2020-12-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1000/110531l.jpg"
   },
   {
     "mal_id": 40052,
@@ -3909,7 +4234,8 @@
     "release_date": "2020-07-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 27
+    "series_episodes": 27,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1418/107954l.webp"
   },
   {
     "mal_id": 40211,
@@ -3921,7 +4247,8 @@
     "release_date": "2019-09-07",
     "type": "movie",
     "runtime_minutes": 101,
-    "series_episodes": 40
+    "series_episodes": 40,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1583/108598l.webp"
   },
   {
     "mal_id": 40221,
@@ -3933,7 +4260,8 @@
     "release_date": "2020-04-02",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 39
+    "series_episodes": 39,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1702/106229l.jpg"
   },
   {
     "mal_id": 40356,
@@ -3945,7 +4273,8 @@
     "release_date": "2022-04-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1143/121873l.webp"
   },
   {
     "mal_id": 40456,
@@ -3957,7 +4286,8 @@
     "release_date": "2020-10-16",
     "type": "movie",
     "runtime_minutes": 116,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1704/106947l.jpg"
   },
   {
     "mal_id": 40496,
@@ -3969,7 +4299,8 @@
     "release_date": "2020-07-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1126/108573l.webp"
   },
   {
     "mal_id": 40591,
@@ -3981,7 +4312,8 @@
     "release_date": "2020-04-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1764/106659l.webp"
   },
   {
     "mal_id": 40664,
@@ -3993,7 +4325,8 @@
     "release_date": "2021-06-04",
     "type": "movie",
     "runtime_minutes": 120,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1378/119190l.jpg"
   },
   {
     "mal_id": 40748,
@@ -4005,7 +4338,8 @@
     "release_date": "2020-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 59
+    "series_episodes": 59,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.webp"
   },
   {
     "mal_id": 40776,
@@ -4017,7 +4351,8 @@
     "release_date": "2020-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1453/106768l.webp"
   },
   {
     "mal_id": 40787,
@@ -4029,7 +4364,8 @@
     "release_date": "2020-12-25",
     "type": "movie",
     "runtime_minutes": 98,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1714/108892l.webp"
   },
   {
     "mal_id": 40834,
@@ -4041,7 +4377,8 @@
     "release_date": "2021-10-15",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1347/117616l.jpg"
   },
   {
     "mal_id": 40839,
@@ -4053,7 +4390,8 @@
     "release_date": "2020-07-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 60
+    "series_episodes": 60,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1902/128382l.webp"
   },
   {
     "mal_id": 40852,
@@ -4065,7 +4403,8 @@
     "release_date": "2021-01-14",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 95
+    "series_episodes": 95,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1711/110614l.webp"
   },
   {
     "mal_id": 40956,
@@ -4077,7 +4416,8 @@
     "release_date": "2020-07-04",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 73
+    "series_episodes": 73,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1673/107657l.jpg"
   },
   {
     "mal_id": 41025,
@@ -4089,7 +4429,8 @@
     "release_date": "2021-04-12",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1880/118484l.webp"
   },
   {
     "mal_id": 41353,
@@ -4101,7 +4442,8 @@
     "release_date": "2020-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1722/107269l.webp"
   },
   {
     "mal_id": 41389,
@@ -4113,7 +4455,8 @@
     "release_date": "2020-10-03",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 30
+    "series_episodes": 30,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1613/108722l.jpg"
   },
   {
     "mal_id": 41457,
@@ -4125,7 +4468,8 @@
     "release_date": "2021-04-11",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1987/117507l.jpg"
   },
   {
     "mal_id": 41467,
@@ -4137,7 +4481,8 @@
     "release_date": "2022-10-11",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 416
+    "series_episodes": 416,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1908/135431l.webp"
   },
   {
     "mal_id": 41487,
@@ -4149,7 +4494,8 @@
     "release_date": "2021-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 96
+    "series_episodes": 96,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1033/118296l.jpg"
   },
   {
     "mal_id": 41587,
@@ -4161,7 +4507,8 @@
     "release_date": "2021-03-27",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1911/113611l.webp"
   },
   {
     "mal_id": 42203,
@@ -4173,7 +4520,8 @@
     "release_date": "2021-01-06",
     "type": "tv",
     "runtime_minutes": 29,
-    "series_episodes": 85
+    "series_episodes": 85,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1724/117421l.jpg"
   },
   {
     "mal_id": 42249,
@@ -4185,7 +4533,8 @@
     "release_date": "2021-04-11",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1839/122012l.jpg"
   },
   {
     "mal_id": 42310,
@@ -4197,7 +4546,8 @@
     "release_date": "2022-09-13",
     "type": "ona",
     "runtime_minutes": 25,
-    "series_episodes": 20
+    "series_episodes": 20,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1818/126435l.webp"
   },
   {
     "mal_id": 42361,
@@ -4209,7 +4559,8 @@
     "release_date": "2021-04-11",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1900/110097l.webp"
   },
   {
     "mal_id": 42886,
@@ -4221,7 +4572,8 @@
     "release_date": "2022-03-04",
     "type": "movie",
     "runtime_minutes": 25,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1859/118711l.webp"
   },
   {
     "mal_id": 42897,
@@ -4233,7 +4585,8 @@
     "release_date": "2021-01-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1695/111486l.jpg"
   },
   {
     "mal_id": 43299,
@@ -4245,7 +4598,8 @@
     "release_date": "2021-01-13",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 13
+    "series_episodes": 13,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1079/110751l.jpg"
   },
   {
     "mal_id": 43608,
@@ -4257,7 +4611,8 @@
     "release_date": "2022-04-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1160/122627l.webp"
   },
   {
     "mal_id": 44511,
@@ -4269,7 +4624,8 @@
     "release_date": "2022-10-12",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1806/126216l.webp"
   },
   {
     "mal_id": 45576,
@@ -4281,7 +4637,8 @@
     "release_date": "2021-10-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1028/117777l.webp"
   },
   {
     "mal_id": 45649,
@@ -4293,7 +4650,8 @@
     "release_date": "2022-12-03",
     "type": "movie",
     "runtime_minutes": 124,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1745/129284l.webp"
   },
   {
     "mal_id": 46569,
@@ -4305,7 +4663,8 @@
     "release_date": "2023-04-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1075/131925l.jpg"
   },
   {
     "mal_id": 47778,
@@ -4317,7 +4676,8 @@
     "release_date": "2021-12-05",
     "type": "tv",
     "runtime_minutes": 26,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1908/120036l.jpg"
   },
   {
     "mal_id": 47917,
@@ -4329,7 +4689,8 @@
     "release_date": "2022-10-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1448/127956l.webp"
   },
   {
     "mal_id": 48316,
@@ -4341,7 +4702,8 @@
     "release_date": "2022-10-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 32
+    "series_episodes": 32,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1091/128729l.jpg"
   },
   {
     "mal_id": 48561,
@@ -4353,7 +4715,8 @@
     "release_date": "2021-12-24",
     "type": "movie",
     "runtime_minutes": 104,
-    "series_episodes": 59
+    "series_episodes": 59,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1121/119044l.jpg"
   },
   {
     "mal_id": 48583,
@@ -4365,7 +4728,8 @@
     "release_date": "2022-01-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1948/120625l.jpg"
   },
   {
     "mal_id": 48736,
@@ -4377,7 +4741,8 @@
     "release_date": "2022-01-09",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1179/119897l.jpg"
   },
   {
     "mal_id": 48926,
@@ -4389,7 +4754,8 @@
     "release_date": "2021-10-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1899/117237l.jpg"
   },
   {
     "mal_id": 49310,
@@ -4401,7 +4767,8 @@
     "release_date": "2022-02-18",
     "type": "movie",
     "runtime_minutes": 88,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1034/120096l.jpg"
   },
   {
     "mal_id": 49387,
@@ -4413,7 +4780,8 @@
     "release_date": "2023-01-10",
     "type": "tv",
     "runtime_minutes": 25,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1170/124312l.webp"
   },
   {
     "mal_id": 49596,
@@ -4425,7 +4793,8 @@
     "release_date": "2022-10-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1258/126929l.webp"
   },
   {
     "mal_id": 49722,
@@ -4437,7 +4806,8 @@
     "release_date": "2022-06-10",
     "type": "movie",
     "runtime_minutes": 73,
-    "series_episodes": 36
+    "series_episodes": 36,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1376/123398l.jpg"
   },
   {
     "mal_id": 49918,
@@ -4449,7 +4819,8 @@
     "release_date": "2022-10-01",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 176
+    "series_episodes": 176,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1483/126005l.jpg"
   },
   {
     "mal_id": 49926,
@@ -4461,7 +4832,8 @@
     "release_date": "2021-10-10",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1065/118763l.webp"
   },
   {
     "mal_id": 50172,
@@ -4473,7 +4845,8 @@
     "release_date": "2022-10-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 37
+    "series_episodes": 37,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1228/125011l.webp"
   },
   {
     "mal_id": 50183,
@@ -4485,7 +4858,8 @@
     "release_date": "2023-02-17",
     "type": "movie",
     "runtime_minutes": 119,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1958/132159l.webp"
   },
   {
     "mal_id": 50265,
@@ -4497,7 +4871,8 @@
     "release_date": "2022-04-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1441/122795l.jpg"
   },
   {
     "mal_id": 50346,
@@ -4509,7 +4884,8 @@
     "release_date": "2022-07-08",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1045/123711l.jpg"
   },
   {
     "mal_id": 50594,
@@ -4521,7 +4897,8 @@
     "release_date": "2022-11-11",
     "type": "movie",
     "runtime_minutes": 121,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1598/128450l.webp"
   },
   {
     "mal_id": 50602,
@@ -4533,7 +4910,8 @@
     "release_date": "2022-10-01",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1111/127508l.webp"
   },
   {
     "mal_id": 51009,
@@ -4545,7 +4923,8 @@
     "release_date": "2023-07-06",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 59
+    "series_episodes": 59,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1792/138022l.webp"
   },
   {
     "mal_id": 51019,
@@ -4557,7 +4936,8 @@
     "release_date": "2023-04-09",
     "type": "tv",
     "runtime_minutes": 28,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1765/135099l.webp"
   },
   {
     "mal_id": 51096,
@@ -4569,7 +4949,8 @@
     "release_date": "2022-07-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 54
+    "series_episodes": 54,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1010/124180l.jpg"
   },
   {
     "mal_id": 51179,
@@ -4581,7 +4962,8 @@
     "release_date": "2023-07-10",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 62
+    "series_episodes": 62,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1898/138005l.jpg"
   },
   {
     "mal_id": 51440,
@@ -4593,7 +4975,8 @@
     "release_date": "2023-02-17",
     "type": "movie",
     "runtime_minutes": 51,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1574/128922l.jpg"
   },
   {
     "mal_id": 51535,
@@ -4605,7 +4988,8 @@
     "release_date": "2023-03-04",
     "type": "tv_special",
     "runtime_minutes": 72,
-    "series_episodes": 89
+    "series_episodes": 89,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1279/131078l.jpg"
   },
   {
     "mal_id": 51805,
@@ -4617,7 +5001,8 @@
     "release_date": "2022-09-30",
     "type": "movie",
     "runtime_minutes": 25,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1700/123762l.webp"
   },
   {
     "mal_id": 52034,
@@ -4629,7 +5014,8 @@
     "release_date": "2023-04-12",
     "type": "tv",
     "runtime_minutes": 30,
-    "series_episodes": 35
+    "series_episodes": 35,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1812/134736l.webp"
   },
   {
     "mal_id": 52198,
@@ -4641,7 +5027,8 @@
     "release_date": "2022-12-17",
     "type": "movie",
     "runtime_minutes": 96,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1670/130060l.webp"
   },
   {
     "mal_id": 52211,
@@ -4653,7 +5040,8 @@
     "release_date": "2023-04-08",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1218/135107l.webp"
   },
   {
     "mal_id": 52299,
@@ -4665,7 +5053,8 @@
     "release_date": "2024-01-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1801/142390l.jpg"
   },
   {
     "mal_id": 52588,
@@ -4677,7 +5066,8 @@
     "release_date": "2024-04-13",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 23
+    "series_episodes": 23,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1370/140362l.jpg"
   },
   {
     "mal_id": 52742,
@@ -4689,7 +5079,8 @@
     "release_date": "2024-02-16",
     "type": "movie",
     "runtime_minutes": 84,
-    "series_episodes": 87
+    "series_episodes": 87,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1665/140360l.webp"
   },
   {
     "mal_id": 52991,
@@ -4701,7 +5092,8 @@
     "release_date": "2023-09-29",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 38
+    "series_episodes": 38,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.webp"
   },
   {
     "mal_id": 53540,
@@ -4713,7 +5105,8 @@
     "release_date": "2023-04-14",
     "type": "movie",
     "runtime_minutes": 109,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1138/133101l.jpg"
   },
   {
     "mal_id": 53887,
@@ -4725,7 +5118,8 @@
     "release_date": "2023-10-07",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 50
+    "series_episodes": 50,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1506/138982l.webp"
   },
   {
     "mal_id": 54112,
@@ -4737,7 +5131,8 @@
     "release_date": "2023-07-09",
     "type": "tv",
     "runtime_minutes": 24,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1384/136408l.webp"
   },
   {
     "mal_id": 54492,
@@ -4749,7 +5144,8 @@
     "release_date": "2023-10-22",
     "type": "tv",
     "runtime_minutes": 22,
-    "series_episodes": 48
+    "series_episodes": 48,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1708/138033l.jpg"
   },
   {
     "mal_id": 55357,
@@ -4761,7 +5157,8 @@
     "release_date": "2024-06-07",
     "type": "movie",
     "runtime_minutes": 82,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1256/142261l.jpg"
   },
   {
     "mal_id": 55701,
@@ -4773,7 +5170,8 @@
     "release_date": "2024-05-12",
     "type": "tv",
     "runtime_minutes": 29,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1565/142711l.jpg"
   },
   {
     "mal_id": 57334,
@@ -4785,7 +5183,8 @@
     "release_date": "2024-10-04",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 24
+    "series_episodes": 24,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1584/143719l.jpg"
   },
   {
     "mal_id": 57555,
@@ -4797,7 +5196,8 @@
     "release_date": "2025-09-19",
     "type": "movie",
     "runtime_minutes": 99,
-    "series_episodes": 12
+    "series_episodes": 12,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1763/150638l.webp"
   },
   {
     "mal_id": 57647,
@@ -4809,7 +5209,8 @@
     "release_date": "2024-05-24",
     "type": "movie",
     "runtime_minutes": 107,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1427/142210l.jpg"
   },
   {
     "mal_id": 58125,
@@ -4821,7 +5222,8 @@
     "release_date": "2024-06-28",
     "type": "movie",
     "runtime_minutes": 57,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1716/142633l.jpg"
   },
   {
     "mal_id": 58222,
@@ -4833,7 +5235,8 @@
     "release_date": "2024-09-20",
     "type": "movie",
     "runtime_minutes": 80,
-    "series_episodes": 11
+    "series_episodes": 11,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1663/144261l.webp"
   },
   {
     "mal_id": 58567,
@@ -4845,7 +5248,8 @@
     "release_date": "2025-01-05",
     "type": "tv",
     "runtime_minutes": 23,
-    "series_episodes": 25
+    "series_episodes": 25,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1448/147351l.webp"
   },
   {
     "mal_id": 58919,
@@ -4857,7 +5261,8 @@
     "release_date": "2025-09-19",
     "type": "movie",
     "runtime_minutes": 106,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1259/151080l.webp"
   },
   {
     "mal_id": 59192,
@@ -4869,7 +5274,8 @@
     "release_date": "2025-07-18",
     "type": "movie",
     "runtime_minutes": 155,
-    "series_episodes": 63
+    "series_episodes": 63,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1681/148216l.webp"
   },
   {
     "mal_id": 59408,
@@ -4881,7 +5287,8 @@
     "release_date": "2025-03-14",
     "type": "movie",
     "runtime_minutes": 74,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1593/147889l.jpg"
   },
   {
     "mal_id": 59571,
@@ -4893,7 +5300,8 @@
     "release_date": "2024-11-08",
     "type": "movie",
     "runtime_minutes": 144,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1379/145452l.jpg"
   },
   {
     "mal_id": 59897,
@@ -4905,7 +5313,8 @@
     "release_date": "2025-06-27",
     "type": "movie",
     "runtime_minutes": 105,
-    "series_episodes": 26
+    "series_episodes": 26,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1134/148744l.jpg"
   },
   {
     "mal_id": 60544,
@@ -4917,7 +5326,8 @@
     "release_date": "2025-01-29",
     "type": "movie",
     "runtime_minutes": 143,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1616/147002l.jpg"
   },
   {
     "mal_id": 61952,
@@ -4929,7 +5339,8 @@
     "release_date": "2025-07-18",
     "type": "movie",
     "runtime_minutes": 118,
-    "series_episodes": 40
+    "series_episodes": 40,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1288/151853l.jpg"
   },
   {
     "mal_id": 62277,
@@ -4941,6 +5352,7 @@
     "release_date": "2026-02-13",
     "type": "movie",
     "runtime_minutes": 124,
-    "series_episodes": 0
+    "series_episodes": 0,
+    "image_url": "https://cdn.myanimelist.net/images/anime/1599/154487l.jpg"
   }
 ]

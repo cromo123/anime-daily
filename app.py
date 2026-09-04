@@ -1,6 +1,9 @@
 from datetime import date
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from challenge import (
@@ -12,8 +15,11 @@ from challenge import (
 from database import DATABASE_PATH
 
 
+STATIC_DIRECTORY = Path(__file__).parent / "static"
+
 app = FastAPI(title="Anime Daily")
 app.state.database_path = DATABASE_PATH
+app.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")
 
 
 class AnswerRequest(BaseModel):
@@ -24,6 +30,11 @@ class AnswerRequest(BaseModel):
 
 def current_challenge_date():
     return date.today().isoformat()
+
+
+@app.get("/", include_in_schema=False)
+def frontend():
+    return FileResponse(STATIC_DIRECTORY / "index.html")
 
 
 @app.get("/health")

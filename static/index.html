@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Anime Daily — five categories, twenty-five daily anime comparisons."
+    >
+    <title>Anime Daily</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/game.js" defer></script>
+  </head>
+  <body>
+    <div class="page-glow" aria-hidden="true"></div>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Anime Daily home">
+          <span class="brand-mark" aria-hidden="true">AD</span>
+          <span>Anime Daily</span>
+        </a>
+
+        <div class="daily-badge">
+          <span>Daily challenge</span>
+          <time id="challenge-date">Today</time>
+        </div>
+      </header>
+
+      <section id="loading-screen" class="center-state" aria-live="polite">
+        <span class="loader" aria-hidden="true"></span>
+        <h1>Preparing today’s matchups</h1>
+        <p>Loading five categories and 25 comparisons.</p>
+      </section>
+
+      <section id="error-screen" class="center-state" hidden>
+        <span class="state-symbol" aria-hidden="true">!</span>
+        <h1>Today’s challenge couldn’t load</h1>
+        <p id="load-error-message">Check your connection and try again.</p>
+        <button id="retry-load-button" class="primary-button" type="button">
+          Try again
+        </button>
+      </section>
+
+      <section id="round-intro" class="round-intro" aria-live="polite" hidden>
+        <p id="intro-round" class="intro-round">Round 1 / 5</p>
+        <h1 id="intro-title">Higher Score</h1>
+        <p id="intro-question">Which anime has the higher score?</p>
+        <span class="intro-line" aria-hidden="true"></span>
+      </section>
+
+      <section id="game-screen" class="game-screen" hidden>
+        <div class="game-status">
+          <div class="category-heading">
+            <p id="category-count" class="eyebrow">Round 1 / 5</p>
+            <h1 id="category-name">Higher Score</h1>
+            <p id="category-question" class="question">
+              Which anime has the higher score?
+            </p>
+          </div>
+
+          <div class="scoreboard" aria-label="Current round score">
+            <div>
+              <span class="score-label">Round score</span>
+              <strong><span id="round-score-count">0</span> / 5</strong>
+            </div>
+          </div>
+        </div>
+
+        <p id="comparison-label" class="comparison-label">
+          Comparison 1 of 5
+        </p>
+
+        <div id="anime-cards" class="anime-grid" aria-live="polite"></div>
+
+        <div id="answer-message" class="answer-message" role="status" hidden>
+          <div>
+            <p id="answer-result" class="answer-result"></p>
+            <p id="answer-detail" class="answer-detail"></p>
+          </div>
+          <button id="next-button" class="primary-button next-button" type="button">
+            Next comparison
+          </button>
+        </div>
+
+        <p id="request-error" class="request-error" role="alert" hidden></p>
+      </section>
+
+      <section id="results-screen" class="results-screen" hidden>
+        <p class="eyebrow">Daily challenge complete</p>
+        <h1>That’s today’s 25.</h1>
+        <div class="final-score-ring" aria-label="Final score">
+          <strong id="final-score">0 / 25</strong>
+          <span id="final-percentage">0% correct</span>
+        </div>
+        <p class="results-copy">
+          Come back tomorrow for a new set, or replay today’s exact challenge.
+        </p>
+        <button id="replay-button" class="primary-button" type="button">
+          Replay today’s challenge
+        </button>
+      </section>
+
+      <noscript>
+        <p class="noscript-message">
+          Anime Daily needs JavaScript enabled to play the daily challenge.
+        </p>
+      </noscript>
+    </main>
+  </body>
+</html>
