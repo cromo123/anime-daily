@@ -5,3 +5,4 @@ __pycache__/
 AGENTS.md
 data/catalog_failures.json
 data/anime_daily.db
+data/anime_catalog.json
