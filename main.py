@@ -1,11 +1,20 @@
 import random
 from datetime import date
 
-from database import load_anime_records
+from database import (
+    DATABASE_PATH,
+    load_anime_records,
+    load_recent_anime_ids,
+    load_recent_matchup_pairs,
+    normalize_matchup_pair,
+    record_challenge,
+)
 
 
 ANIME_PER_CATEGORY = 6
 MAX_GENERATION_ATTEMPTS = 500
+RECENT_ANIME_DAYS = 7
+RECENT_MATCHUP_DAYS = 90
 
 CATEGORY_RULES = [
     {
@@ -56,10 +65,14 @@ def get_comparison_value(anime, metric):
     return value
 
 
-def is_eligible(anime, category, used_anime_ids):
+def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     mal_id = anime.get("mal_id")
 
-    if mal_id is None or mal_id in used_anime_ids:
+    if (
+        mal_id is None
+        or mal_id in used_anime_ids
+        or mal_id in blocked_anime_ids
+    ):
         return False
 
     if category["name"] == "Longer Runtime" and anime.get("type") != "movie":
@@ -71,11 +84,18 @@ def is_eligible(anime, category, used_anime_ids):
     return get_comparison_value(anime, category["metric"]) is not None
 
 
-def select_category_anime(catalog, category, used_anime_ids, random_source):
+def select_category_anime(
+    catalog,
+    category,
+    used_anime_ids,
+    blocked_anime_ids,
+    recent_matchup_pairs,
+    random_source,
+):
     candidates_by_id = {}
 
     for anime in catalog:
-        if is_eligible(anime, category, used_anime_ids):
+        if is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
             candidates_by_id[anime["mal_id"]] = anime
 
     candidates_by_value = {}
@@ -89,46 +109,62 @@ def select_category_anime(catalog, category, used_anime_ids, random_source):
 
     selected_anime = []
     previous_value = None
+    previous_anime = None
 
     while len(selected_anime) < ANIME_PER_CATEGORY:
-        available_values = [
-            value
-            for value, candidates in candidates_by_value.items()
-            if candidates and value != previous_value
-        ]
+        available_candidates_by_value = {}
 
-        if not available_values:
+        for value, candidates in candidates_by_value.items():
+            if value == previous_value:
+                continue
+
+            available_candidates = []
+
+            for anime in candidates:
+                if previous_anime is not None:
+                    matchup_pair = normalize_matchup_pair(
+                        previous_anime["mal_id"],
+                        anime["mal_id"],
+                    )
+
+                    if matchup_pair in recent_matchup_pairs:
+                        continue
+
+                available_candidates.append(anime)
+
+            if available_candidates:
+                available_candidates_by_value[value] = available_candidates
+
+        if not available_candidates_by_value:
             return None
 
         largest_group_size = max(
-            len(candidates_by_value[value]) for value in available_values
+            len(candidates)
+            for candidates in available_candidates_by_value.values()
         )
         largest_values = [
             value
-            for value in available_values
-            if len(candidates_by_value[value]) == largest_group_size
+            for value, candidates in available_candidates_by_value.items()
+            if len(candidates) == largest_group_size
         ]
         selected_value = random_source.choice(largest_values)
-        selected_anime.append(candidates_by_value[selected_value].pop())
+        chosen_anime = random_source.choice(
+            available_candidates_by_value[selected_value]
+        )
+        candidates_by_value[selected_value].remove(chosen_anime)
+        selected_anime.append(chosen_anime)
         previous_value = selected_value
+        previous_anime = chosen_anime
 
     return selected_anime
 
 
-def generate_challenge(catalog, random_source=None):
-    if random_source is None:
-        random_source = random
-
-    unique_anime_ids = {
-        anime.get("mal_id") for anime in catalog if anime.get("mal_id") is not None
-    }
-
-    if len(unique_anime_ids) < ANIME_PER_CATEGORY * len(CATEGORY_RULES):
-        raise RuntimeError(
-            "The catalog needs at least 30 unique MAL entries to build a complete "
-            "challenge."
-        )
-
+def try_generate_challenge(
+    catalog,
+    blocked_anime_ids,
+    recent_matchup_pairs,
+    random_source,
+):
     runtime_category = CATEGORY_RULES[-1]
     selection_order = [runtime_category] + CATEGORY_RULES[:-1]
 
@@ -141,6 +177,8 @@ def generate_challenge(catalog, random_source=None):
                 catalog,
                 category,
                 used_anime_ids,
+                blocked_anime_ids,
+                recent_matchup_pairs,
                 random_source,
             )
 
@@ -160,10 +198,83 @@ def generate_challenge(catalog, random_source=None):
 
             return challenge
 
+    return None
+
+
+def generate_challenge(
+    catalog,
+    random_source=None,
+    recent_anime_ids=None,
+    recent_matchup_pairs=None,
+):
+    if random_source is None:
+        random_source = random
+
+    if recent_anime_ids is None:
+        recent_anime_ids = set()
+
+    if recent_matchup_pairs is None:
+        recent_matchup_pairs = set()
+
+    unique_anime_ids = {
+        anime.get("mal_id") for anime in catalog if anime.get("mal_id") is not None
+    }
+
+    if len(unique_anime_ids) < ANIME_PER_CATEGORY * len(CATEGORY_RULES):
+        raise RuntimeError(
+            "The catalog needs at least 30 unique MAL entries to build a complete "
+            "challenge."
+        )
+
+    challenge = try_generate_challenge(
+        catalog,
+        recent_anime_ids,
+        recent_matchup_pairs,
+        random_source,
+    )
+
+    if challenge is not None:
+        return challenge
+
+    challenge = try_generate_challenge(
+        catalog,
+        set(),
+        recent_matchup_pairs,
+        random_source,
+    )
+
+    if challenge is not None:
+        return challenge
+
     raise RuntimeError(
-        "The catalog could not produce a complete valid challenge. It needs six "
-        "eligible anime per category, unequal adjacent metric values, six movies "
-        "for Longer Runtime, and 30 MAL IDs with no cross-category reuse."
+        "The catalog could not produce a complete valid challenge, even after "
+        "relaxing recent-anime avoidance. Factual validity, movie-only runtime, "
+        "unique MAL IDs, and recent exact-matchup prevention remain required."
+    )
+
+
+def generate_history_aware_challenge(
+    challenge_date,
+    database_path=DATABASE_PATH,
+    random_source=None,
+):
+    catalog = load_anime_records(database_path)
+    recent_anime_ids = load_recent_anime_ids(
+        challenge_date,
+        RECENT_ANIME_DAYS,
+        database_path,
+    )
+    recent_matchup_pairs = load_recent_matchup_pairs(
+        challenge_date,
+        RECENT_MATCHUP_DAYS,
+        database_path,
+    )
+
+    return generate_challenge(
+        catalog,
+        random_source,
+        recent_anime_ids,
+        recent_matchup_pairs,
     )
 
 
@@ -238,8 +349,9 @@ def play_category(category, total_score):
 
 
 def main():
-    catalog = load_anime_records()
-    challenge = generate_challenge(catalog)
+    challenge_date = date.today().isoformat()
+    challenge = generate_history_aware_challenge(challenge_date)
+    record_challenge(challenge, challenge_date)
     total_score = 0
 
     for category in challenge:
