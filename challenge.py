@@ -362,6 +362,7 @@ def serialize_public_challenge(challenge_date, challenge):
                 "mal_id": anime["mal_id"],
                 "title": anime["title"],
                 "type": anime["type"],
+                "image_url": anime.get("image_url"),
             }
             for position, anime in enumerate(category["anime"], start=1)
         ]

@@ -1,4 +1,5 @@
 import json
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -13,6 +14,7 @@ POPULAR_CANDIDATE_TARGET = 350
 MOVIE_CANDIDATE_TARGET = 75
 DISCOVERY_PAGE_SIZE = 100
 CHECKPOINT_INTERVAL = 10
+BATCH_RETRY_DELAYS = (2, 5, 10)
 
 DATA_DIRECTORY = Path(__file__).parent / "data"
 CATALOG_PATH = DATA_DIRECTORY / "anime_catalog.json"
@@ -168,12 +170,70 @@ def sorted_catalog(catalog_by_id):
     return sorted(catalog_by_id.values(), key=lambda anime: anime["mal_id"])
 
 
-def save_build_progress(catalog_by_id, failures):
+def save_build_progress(catalog_by_id, failures=None):
     write_json(CATALOG_PATH, sorted_catalog(catalog_by_id))
-    write_json(FAILURES_PATH, failures)
+
+    if failures is not None:
+        write_json(FAILURES_PATH, failures)
 
 
-def build_catalog(candidates, failures=None):
+def attempt_catalog_record(pending_record):
+    candidate = pending_record["candidate"]
+    anime_id = candidate["mal_id"]
+    title = candidate.get("title")
+    anime = pending_record.get("anime")
+
+    if anime is None:
+        print(f"Fetching MAL anime {anime_id}: {title or 'Unknown title'}")
+
+        try:
+            anime = fetch_anime(anime_id)
+        except Exception as error:
+            pending_record["failure"] = {
+                "mal_id": anime_id,
+                "title": title,
+                "stage": "anime_details",
+                "reason": f"{type(error).__name__}: {error}",
+            }
+            return None
+
+        if anime is None:
+            pending_record["failure"] = {
+                "mal_id": anime_id,
+                "title": title,
+                "stage": "anime_details",
+                "reason": "Anime details could not be fetched after retries.",
+            }
+            return None
+
+        pending_record["anime"] = anime
+
+    try:
+        series_episodes = fetch_series_episode_count(anime_id)
+    except Exception as error:
+        pending_record["failure"] = {
+            "mal_id": anime_id,
+            "title": anime["title"],
+            "stage": "series_episodes",
+            "reason": f"{type(error).__name__}: {error}",
+        }
+        return None
+
+    if series_episodes is None:
+        pending_record["failure"] = {
+            "mal_id": anime_id,
+            "title": anime["title"],
+            "stage": "series_episodes",
+            "reason": "Series episode total could not be determined reliably.",
+        }
+        return None
+
+    catalog_record = anime.copy()
+    catalog_record["series_episodes"] = series_episodes
+    return catalog_record
+
+
+def build_catalog(candidates, failures=None, retry_delays=BATCH_RETRY_DELAYS):
     if failures is None:
         failures = []
 
@@ -184,75 +244,51 @@ def build_catalog(candidates, failures=None):
         if is_complete_catalog_record(record)
     }
 
-    for candidate_number, candidate in enumerate(candidates, start=1):
+    pending_by_id = {}
+
+    for candidate in candidates:
         anime_id = candidate["mal_id"]
-        title = candidate.get("title")
 
-        if anime_id not in catalog_by_id:
-            print(f"Fetching MAL anime {anime_id}: {title or 'Unknown title'}")
+        if anime_id not in catalog_by_id and anime_id not in pending_by_id:
+            pending_by_id[anime_id] = {
+                "candidate": candidate,
+                "anime": None,
+                "failure": None,
+            }
 
-            try:
-                anime = fetch_anime(anime_id)
-            except Exception as error:
-                anime = None
-                add_failure(
-                    failures,
-                    anime_id,
-                    title,
-                    "anime_details",
-                    f"{type(error).__name__}: {error}",
-                )
+    processed_attempts = 0
+    pass_delays = (0, *retry_delays)
 
-            if anime is None:
-                if not any(
-                    failure["mal_id"] == anime_id
-                    and failure["stage"] == "anime_details"
-                    for failure in failures
-                ):
-                    add_failure(
-                        failures,
-                        anime_id,
-                        title,
-                        "anime_details",
-                        "Anime details could not be fetched after retries.",
-                    )
-            else:
-                try:
-                    series_episodes = fetch_series_episode_count(anime_id)
-                except Exception as error:
-                    series_episodes = None
-                    add_failure(
-                        failures,
-                        anime_id,
-                        anime["title"],
-                        "series_episodes",
-                        f"{type(error).__name__}: {error}",
-                    )
+    for pass_number, retry_delay in enumerate(pass_delays, start=1):
+        if not pending_by_id:
+            break
 
-                if series_episodes is None:
-                    if not any(
-                        failure["mal_id"] == anime_id
-                        and failure["stage"] == "series_episodes"
-                        for failure in failures
-                    ):
-                        add_failure(
-                            failures,
-                            anime_id,
-                            anime["title"],
-                            "series_episodes",
-                            "Series episode total could not be determined reliably.",
-                        )
-                else:
-                    catalog_record = anime.copy()
-                    catalog_record["series_episodes"] = series_episodes
-                    catalog_by_id[anime_id] = catalog_record
+        if retry_delay:
+            print(
+                f"Waiting {retry_delay} seconds before catalog retry pass "
+                f"{pass_number - 1}."
+            )
+            time.sleep(retry_delay)
 
-        if candidate_number % CHECKPOINT_INTERVAL == 0:
-            save_build_progress(catalog_by_id, failures)
+        for anime_id in list(pending_by_id):
+            pending_record = pending_by_id[anime_id]
+            catalog_record = attempt_catalog_record(pending_record)
+            processed_attempts += 1
 
-    save_build_progress(catalog_by_id, failures)
+            if catalog_record is not None:
+                catalog_by_id[anime_id] = catalog_record
+                del pending_by_id[anime_id]
 
-    return sorted_catalog(catalog_by_id), failures
+            if processed_attempts % CHECKPOINT_INTERVAL == 0:
+                save_build_progress(catalog_by_id)
+
+    unresolved_failures = [
+        pending_record["failure"] for pending_record in pending_by_id.values()
+    ]
+    final_failures = [*failures, *unresolved_failures]
+    save_build_progress(catalog_by_id, final_failures)
+
+    return sorted_catalog(catalog_by_id), final_failures
 
 
 def print_summary(candidate_count, catalog, failures):

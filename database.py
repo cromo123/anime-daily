@@ -9,6 +9,7 @@ CREATE_ANIME_TABLE = """
 CREATE TABLE IF NOT EXISTS anime (
     mal_id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
+    image_url TEXT,
     score REAL,
     popularity_rank INTEGER,
     members INTEGER,
@@ -67,6 +68,7 @@ UPSERT_ANIME = """
 INSERT INTO anime (
     mal_id,
     title,
+    image_url,
     score,
     popularity_rank,
     members,
@@ -76,9 +78,10 @@ INSERT INTO anime (
     type,
     runtime_minutes
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(mal_id) DO UPDATE SET
     title = excluded.title,
+    image_url = excluded.image_url,
     score = excluded.score,
     popularity_rank = excluded.popularity_rank,
     members = excluded.members,
@@ -94,6 +97,15 @@ def _connect_database(database_path):
     connection = sqlite3.connect(database_path)
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
+
+
+def _migrate_anime_table(connection):
+    column_names = {
+        column[1] for column in connection.execute("PRAGMA table_info(anime)")
+    }
+
+    if "image_url" not in column_names:
+        connection.execute("ALTER TABLE anime ADD COLUMN image_url TEXT")
 
 
 def _parse_challenge_date(challenge_date):
@@ -120,6 +132,7 @@ def initialize_database(database_path=DATABASE_PATH):
 
     try:
         connection.execute(CREATE_ANIME_TABLE)
+        _migrate_anime_table(connection)
         connection.executescript(CREATE_HISTORY_TABLES)
         connection.commit()
     finally:
@@ -134,6 +147,7 @@ def upsert_anime_records(anime_records, database_path=DATABASE_PATH):
         (
             anime.get("mal_id"),
             anime.get("title"),
+            anime.get("image_url"),
             anime.get("score"),
             anime.get("popularity_rank"),
             anime.get("members"),
@@ -165,6 +179,7 @@ def load_anime_records(database_path=DATABASE_PATH):
             f"Anime database not found at {database_path}. Run import_catalog.py first."
         )
 
+    initialize_database(database_path)
     connection = _connect_database(database_path)
     connection.row_factory = sqlite3.Row
 
@@ -174,6 +189,7 @@ def load_anime_records(database_path=DATABASE_PATH):
             SELECT
                 mal_id,
                 title,
+                image_url,
                 score,
                 popularity_rank,
                 members,
@@ -247,6 +263,7 @@ def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
                 challenge_anime.position,
                 anime.mal_id,
                 anime.title,
+                anime.image_url,
                 anime.score,
                 anime.popularity_rank,
                 anime.members,

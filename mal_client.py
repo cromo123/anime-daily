@@ -96,7 +96,7 @@ def fetch_anime(anime_id):
 
     params = {
         "fields": (
-            "id,title,mean,popularity,num_list_users,"
+            "id,title,main_picture,mean,popularity,num_list_users,"
             "num_episodes,start_date,media_type,average_episode_duration"
         )
     }
@@ -115,9 +115,17 @@ def fetch_anime(anime_id):
     else:
         runtime_minutes = None
 
+    main_picture = data.get("main_picture")
+
+    if isinstance(main_picture, dict):
+        image_url = main_picture.get("large") or main_picture.get("medium")
+    else:
+        image_url = None
+
     anime = {
         "mal_id": data["id"],
         "title": data["title"],
+        "image_url": image_url,
         "score": data.get("mean"),
         "popularity_rank": data.get("popularity"),
         "members": data.get("num_list_users"),
