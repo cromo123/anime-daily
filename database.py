@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS matchup_history (
     FOREIGN KEY (anime_b_id) REFERENCES anime(mal_id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS challenge_runs_date_unique_index
+ON challenge_runs(challenge_date);
+
 CREATE INDEX IF NOT EXISTS challenge_runs_date_index
 ON challenge_runs(challenge_date);
 
@@ -216,6 +219,58 @@ def load_recent_anime_ids(challenge_date, recent_days, database_path=DATABASE_PA
         connection.close()
 
     return {row[0] for row in rows}
+
+
+def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
+    challenge_date = _parse_challenge_date(challenge_date).isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        challenge_run = connection.execute(
+            """
+            SELECT id, challenge_date, created_at
+            FROM challenge_runs
+            WHERE challenge_date = ?
+            """,
+            (challenge_date,),
+        ).fetchone()
+
+        if challenge_run is None:
+            return None
+
+        placements = connection.execute(
+            """
+            SELECT
+                challenge_anime.category,
+                challenge_anime.position,
+                anime.mal_id,
+                anime.title,
+                anime.score,
+                anime.popularity_rank,
+                anime.members,
+                anime.entry_episodes,
+                anime.series_episodes,
+                anime.release_date,
+                anime.type,
+                anime.runtime_minutes
+            FROM challenge_anime
+            JOIN anime ON anime.mal_id = challenge_anime.mal_id
+            WHERE challenge_anime.challenge_id = ?
+            ORDER BY challenge_anime.category, challenge_anime.position
+            """,
+            (challenge_run["id"],),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return {
+        "id": challenge_run["id"],
+        "challenge_date": challenge_run["challenge_date"],
+        "created_at": challenge_run["created_at"],
+        "placements": [dict(placement) for placement in placements],
+    }
 
 
 def load_recent_matchup_pairs(
