@@ -7,13 +7,17 @@ from pathlib import Path
 from database import (
     DATABASE_PATH,
     initialize_database,
+    initialize_ingestion_failure_state,
     load_anime_ingestion_record,
+    load_ingestion_failures,
     load_anime_records,
     load_anime_relations,
     load_ingestion_summary,
     load_mainline_neighbor_ids,
     resolve_and_store_series_episode_count,
+    remove_ingestion_failure,
     store_anime_relations,
+    upsert_ingestion_failure,
     upsert_anime_records,
 )
 from mal_client import (
@@ -264,6 +268,19 @@ def import_existing_snapshot(catalog_path=CATALOG_PATH, database_path=DATABASE_P
     return len(reusable_records)
 
 
+def initialize_failure_state(failures_path, database_path):
+    try:
+        fallback_failures = load_json_list(Path(failures_path))
+    except (OSError, RuntimeError) as error:
+        print(
+            f"Warning: could not read the optional failure report at "
+            f"{failures_path}: {error}. Continuing from SQLite."
+        )
+        fallback_failures = []
+
+    initialize_ingestion_failure_state(fallback_failures, database_path)
+
+
 def export_build_outputs(
     database_path=DATABASE_PATH,
     catalog_path=CATALOG_PATH,
@@ -432,8 +449,15 @@ def attempt_catalog_record(pending_record, database_path=DATABASE_PATH):
     anime_id = candidate["mal_id"]
     title = candidate.get("title")
     anime = load_anime_ingestion_record(anime_id, database_path)
+    retry_stage = candidate.get("retry_stage")
 
-    if anime is not None and anime["series_episodes"] is not None:
+    anime_is_resolved = anime is not None and anime["series_episodes"] is not None
+    relations_are_resolved = (
+        retry_stage != "anime_relations"
+        or load_anime_relations(anime_id, database_path) is not None
+    )
+
+    if anime_is_resolved and relations_are_resolved:
         return anime
 
     _, failure = resolve_series_graph(anime_id, title, database_path)
@@ -452,6 +476,8 @@ def build_catalog(
     database_path=DATABASE_PATH,
     catalog_path=CATALOG_PATH,
     failures_path=FAILURES_PATH,
+    import_snapshot=True,
+    export_snapshot=True,
 ):
     if failures is None:
         failures = []
@@ -460,22 +486,37 @@ def build_catalog(
     catalog_path = Path(catalog_path)
     failures_path = Path(failures_path)
     initialize_database(database_path)
-    import_existing_snapshot(catalog_path, database_path)
+
+    if import_snapshot:
+        import_existing_snapshot(catalog_path, database_path)
+
+    initialize_failure_state(failures_path, database_path)
 
     pending_by_id = {}
 
     for candidate in candidates:
         anime_id = candidate["mal_id"]
         stored_anime = load_anime_ingestion_record(anime_id, database_path)
+        retry_stage = candidate.get("retry_stage")
+        relations_are_resolved = (
+            retry_stage != "anime_relations"
+            or load_anime_relations(anime_id, database_path) is not None
+        )
 
         if (
-            (stored_anime is None or stored_anime["series_episodes"] is None)
+            (
+                stored_anime is None
+                or stored_anime["series_episodes"] is None
+                or not relations_are_resolved
+            )
             and anime_id not in pending_by_id
         ):
             pending_by_id[anime_id] = {
                 "candidate": candidate,
-                "failure": None,
+                "failure": candidate.get("retry_failure"),
             }
+        else:
+            remove_ingestion_failure(anime_id, database_path)
 
     pass_delays = (0, *retry_delays)
 
@@ -492,28 +533,46 @@ def build_catalog(
 
         for anime_id in list(pending_by_id):
             pending_record = pending_by_id[anime_id]
+            previous_failure = pending_record.get("failure")
             catalog_record = attempt_catalog_record(pending_record, database_path)
 
             if catalog_record is not None:
-                del pending_by_id[anime_id]
+                if previous_failure is not None:
+                    remove_ingestion_failure(
+                        previous_failure["mal_id"],
+                        database_path,
+                    )
 
-    unresolved_failures = [
-        pending_record["failure"]
-        or build_failure(
-            pending_record["candidate"]["mal_id"],
-            pending_record["candidate"].get("title"),
-            "catalog_build",
-            "The record is still unresolved after all retry passes.",
-        )
-        for pending_record in pending_by_id.values()
-    ]
+                remove_ingestion_failure(anime_id, database_path)
+                del pending_by_id[anime_id]
+                continue
+
+            latest_failure = pending_record["failure"]
+            upsert_ingestion_failure(latest_failure, database_path)
+
+            if (
+                previous_failure is not None
+                and previous_failure["mal_id"] != latest_failure["mal_id"]
+            ):
+                remove_ingestion_failure(
+                    previous_failure["mal_id"],
+                    database_path,
+                )
+
+    unresolved_failures = load_ingestion_failures(database_path)
     final_failures = deduplicate_failures([*failures, *unresolved_failures])
-    catalog, snapshot_exported, failures_exported = export_build_outputs(
-        database_path,
-        catalog_path,
-        failures_path,
-        final_failures,
-    )
+
+    if export_snapshot:
+        catalog, snapshot_exported, failures_exported = export_build_outputs(
+            database_path,
+            catalog_path,
+            failures_path,
+            final_failures,
+        )
+    else:
+        catalog = []
+        snapshot_exported = True
+        failures_exported = write_json(failures_path, final_failures)
 
     if not snapshot_exported:
         print("\nDatabase ingestion completed successfully.")
@@ -530,6 +589,66 @@ def build_catalog(
             )
 
     return catalog, final_failures
+
+
+def retry_failed_catalog_records(
+    database_path=DATABASE_PATH,
+    catalog_path=CATALOG_PATH,
+    failures_path=FAILURES_PATH,
+    retry_delays=BATCH_RETRY_DELAYS,
+):
+    database_path = Path(database_path)
+    catalog_path = Path(catalog_path)
+    failures_path = Path(failures_path)
+    initialize_database(database_path)
+    initialize_failure_state(failures_path, database_path)
+
+    loaded_failures = load_ingestion_failures(database_path)
+    loaded_failure_ids = {failure["mal_id"] for failure in loaded_failures}
+    request_count_before = get_mal_api_request_count()
+
+    if loaded_failures:
+        retry_candidates = [
+            {
+                "mal_id": failure["mal_id"],
+                "title": failure.get("title"),
+                "retry_stage": failure.get("stage"),
+                "retry_failure": failure,
+            }
+            for failure in loaded_failures
+        ]
+        build_catalog(
+            retry_candidates,
+            retry_delays=retry_delays,
+            database_path=database_path,
+            catalog_path=catalog_path,
+            failures_path=failures_path,
+            import_snapshot=False,
+            export_snapshot=False,
+        )
+    else:
+        write_json(failures_path, [])
+
+    unresolved_failures = load_ingestion_failures(database_path)
+    unresolved_ids = {failure["mal_id"] for failure in unresolved_failures}
+    recovered_count = len(loaded_failure_ids - unresolved_ids)
+    request_count_after = get_mal_api_request_count()
+
+    print("\nCatalog failure retry summary")
+    print(f"Failures loaded: {len(loaded_failures)}")
+    print(f"Recovered: {recovered_count}")
+    print(f"Still unresolved: {len(unresolved_failures)}")
+    print(
+        "MAL request attempts: "
+        f"{request_count_after - request_count_before}"
+    )
+
+    return {
+        "failures_loaded": len(loaded_failures),
+        "recovered": recovered_count,
+        "still_unresolved": len(unresolved_failures),
+        "mal_request_attempts": request_count_after - request_count_before,
+    }
 
 
 def print_summary(
@@ -577,19 +696,32 @@ def parse_arguments(arguments=None):
         "--anime-limit",
         type=positive_integer,
         default=POPULAR_CANDIDATE_TARGET,
-        help="number of popularity-ranking candidates to discover",
+        help="number of popularity-ranking candidates for a normal build",
     )
     parser.add_argument(
         "--movie-limit",
         type=positive_integer,
         default=MOVIE_CANDIDATE_TARGET,
-        help="number of movie-ranking candidates to discover",
+        help="number of movie-ranking candidates for a normal build",
+    )
+    parser.add_argument(
+        "--retry-failures",
+        action="store_true",
+        help=(
+            "retry only unresolved catalog failures without running "
+            "ranking discovery"
+        ),
     )
     return parser.parse_args(arguments)
 
 
 def main(arguments=None):
     args = parse_arguments(arguments)
+
+    if args.retry_failures:
+        retry_failed_catalog_records()
+        return
+
     request_count_before = get_mal_api_request_count()
     candidates, discovery_failures = discover_candidates(
         popular_target=args.anime_limit,

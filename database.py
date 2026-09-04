@@ -33,6 +33,19 @@ CREATE TABLE IF NOT EXISTS anime_relations (
 
 CREATE INDEX IF NOT EXISTS anime_relations_target_index
 ON anime_relations(target_mal_id);
+
+CREATE TABLE IF NOT EXISTS catalog_ingestion_failures (
+    mal_id INTEGER PRIMARY KEY,
+    title TEXT,
+    stage TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ingestion_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 CREATE_HISTORY_TABLES = """
@@ -108,6 +121,7 @@ ON CONFLICT(mal_id) DO UPDATE SET
 
 EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
 MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
+FAILURE_STATE_KEY = "catalog_failures_initialized"
 
 
 def _connect_database(database_path):
@@ -473,6 +487,154 @@ def load_ingestion_summary(database_path=DATABASE_PATH):
         "missing_series": missing_series,
         "media_type_counts": media_type_counts,
     }
+
+
+def initialize_ingestion_failure_state(
+    fallback_failures,
+    database_path=DATABASE_PATH,
+):
+    """Seed SQLite once from the legacy JSON failure report."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        state = connection.execute(
+            "SELECT value FROM ingestion_state WHERE key = ?",
+            (FAILURE_STATE_KEY,),
+        ).fetchone()
+
+        if state is not None:
+            return False
+
+        updated_at = datetime.now(timezone.utc).isoformat()
+        rows_by_id = {}
+
+        for failure in fallback_failures:
+            mal_id = failure.get("mal_id")
+
+            if mal_id is None:
+                continue
+
+            rows_by_id[mal_id] = (
+                mal_id,
+                failure.get("title"),
+                failure.get("stage") or "catalog_build",
+                failure.get("reason") or "Unknown ingestion failure.",
+                updated_at,
+            )
+
+        connection.executemany(
+            """
+            INSERT INTO catalog_ingestion_failures (
+                mal_id,
+                title,
+                stage,
+                reason,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(mal_id) DO UPDATE SET
+                title = excluded.title,
+                stage = excluded.stage,
+                reason = excluded.reason,
+                updated_at = excluded.updated_at
+            """,
+            rows_by_id.values(),
+        )
+        connection.execute(
+            "INSERT INTO ingestion_state (key, value) VALUES (?, ?)",
+            (FAILURE_STATE_KEY, "1"),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return True
+
+
+def upsert_ingestion_failure(failure, database_path=DATABASE_PATH):
+    mal_id = failure.get("mal_id")
+
+    if mal_id is None:
+        return False
+
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO catalog_ingestion_failures (
+                mal_id,
+                title,
+                stage,
+                reason,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(mal_id) DO UPDATE SET
+                title = excluded.title,
+                stage = excluded.stage,
+                reason = excluded.reason,
+                updated_at = excluded.updated_at
+            """,
+            (
+                mal_id,
+                failure.get("title"),
+                failure.get("stage") or "catalog_build",
+                failure.get("reason") or "Unknown ingestion failure.",
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return True
+
+
+def remove_ingestion_failure(anime_id, database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        cursor = connection.execute(
+            "DELETE FROM catalog_ingestion_failures WHERE mal_id = ?",
+            (anime_id,),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return cursor.rowcount > 0
+
+
+def load_ingestion_failures(database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT mal_id, title, stage, reason, updated_at
+            FROM catalog_ingestion_failures
+            ORDER BY mal_id
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [dict(row) for row in rows]
 
 
 def load_anime_records(database_path=DATABASE_PATH):
