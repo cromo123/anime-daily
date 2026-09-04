@@ -1,10 +1,9 @@
-import json
 import random
 from datetime import date
-from pathlib import Path
+
+from database import load_anime_records
 
 
-CATALOG_PATH = Path(__file__).parent / "data" / "anime_catalog.json"
 ANIME_PER_CATEGORY = 6
 MAX_GENERATION_ATTEMPTS = 500
 
@@ -40,23 +39,6 @@ CATEGORY_RULES = [
         "question": "Which movie has the longer runtime?",
     },
 ]
-
-
-def load_catalog(catalog_path=CATALOG_PATH):
-    try:
-        with catalog_path.open(encoding="utf-8") as catalog_file:
-            catalog = json.load(catalog_file)
-    except FileNotFoundError as error:
-        raise RuntimeError(
-            f"Anime catalog not found at {catalog_path}. Run build_catalog.py first."
-        ) from error
-    except json.JSONDecodeError as error:
-        raise RuntimeError(f"Anime catalog at {catalog_path} is not valid JSON.") from error
-
-    if not isinstance(catalog, list):
-        raise RuntimeError("Anime catalog must contain a JSON list of anime entries.")
-
-    return catalog
 
 
 def get_comparison_value(anime, metric):
@@ -256,7 +238,7 @@ def play_category(category, total_score):
 
 
 def main():
-    catalog = load_catalog()
+    catalog = load_anime_records()
     challenge = generate_challenge(catalog)
     total_score = 0
 

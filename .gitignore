@@ -4,3 +4,4 @@ __pycache__/
 .env
 AGENTS.md
 data/catalog_failures.json
+data/anime_daily.db

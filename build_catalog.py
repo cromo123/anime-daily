@@ -262,7 +262,7 @@ def print_summary(candidate_count, catalog, failures):
 
     print("\nCatalog build summary")
     print(f"Candidates discovered: {candidate_count}")
-    print(f"Records successfully saved: {len(catalog)}")
+    print(f"Total catalog records currently stored: {len(catalog)}")
     print(f"Failures: {len(failures)}")
     print(f"Movie count: {media_type_counts.get('movie', 0)}")
     print("Media type counts:")
