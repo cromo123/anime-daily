@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -28,6 +29,7 @@ MOVIE_CANDIDATE_TARGET = 75
 DISCOVERY_PAGE_SIZE = 100
 CHECKPOINT_INTERVAL = 10
 BATCH_RETRY_DELAYS = (2, 5, 10)
+JSON_REPLACE_RETRY_DELAYS = (0.5, 1, 2, 4)
 
 DATA_DIRECTORY = Path(__file__).parent / "data"
 CATALOG_PATH = DATA_DIRECTORY / "anime_catalog.json"
@@ -64,15 +66,59 @@ def load_json_list(path):
     return data
 
 
-def write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
+def write_json(path, data, retry_delays=JSON_REPLACE_RETRY_DELAYS):
+    path = Path(path)
     temporary_path = path.with_suffix(f"{path.suffix}.tmp")
 
-    with temporary_path.open("w", encoding="utf-8") as json_file:
-        json.dump(data, json_file, ensure_ascii=False, indent=2)
-        json_file.write("\n")
+    try:
+        json_text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    except (TypeError, ValueError) as error:
+        print(f"Warning: could not serialize JSON for {path}: {error}")
+        return False
 
-    temporary_path.replace(path)
+    try:
+        temporary_path.unlink(missing_ok=True)
+    except OSError:
+        # The retry loop below may still be able to overwrite or replace it.
+        pass
+
+    temporary_file_is_ready = False
+    last_error = None
+
+    for attempt_number in range(len(retry_delays) + 1):
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            if not temporary_file_is_ready:
+                temporary_path.write_text(json_text, encoding="utf-8")
+                temporary_file_is_ready = True
+
+            os.replace(temporary_path, path)
+            return True
+        except OSError as error:
+            last_error = error
+
+            try:
+                temporary_file_exists = temporary_path.exists()
+            except OSError:
+                temporary_file_exists = False
+
+            if not temporary_file_exists:
+                temporary_file_is_ready = False
+
+            if attempt_number < len(retry_delays):
+                time.sleep(retry_delays[attempt_number])
+
+    try:
+        temporary_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    print(
+        f"Warning: could not write {path} after "
+        f"{len(retry_delays) + 1} attempts: {last_error}"
+    )
+    return False
 
 
 def add_failure(failures, mal_id, title, stage, reason):
@@ -190,12 +236,20 @@ def export_catalog_snapshot(database_path=DATABASE_PATH, catalog_path=CATALOG_PA
         for anime in load_anime_records(database_path)
         if anime.get("series_episodes") is not None
     ]
-    write_json(Path(catalog_path), catalog)
-    return catalog
+    snapshot_exported = write_json(Path(catalog_path), catalog)
+    return catalog, snapshot_exported
 
 
 def import_existing_snapshot(catalog_path=CATALOG_PATH, database_path=DATABASE_PATH):
-    existing_catalog = load_json_list(Path(catalog_path))
+    try:
+        existing_catalog = load_json_list(Path(catalog_path))
+    except (OSError, RuntimeError) as error:
+        print(
+            f"Warning: could not read the optional catalog snapshot at "
+            f"{catalog_path}: {error}. Continuing from SQLite."
+        )
+        return 0
+
     reusable_records = [
         record
         for record in existing_catalog
@@ -210,18 +264,22 @@ def import_existing_snapshot(catalog_path=CATALOG_PATH, database_path=DATABASE_P
     return len(reusable_records)
 
 
-def save_build_progress(
+def export_build_outputs(
     database_path=DATABASE_PATH,
     catalog_path=CATALOG_PATH,
     failures_path=FAILURES_PATH,
     failures=None,
 ):
-    catalog = export_catalog_snapshot(database_path, catalog_path)
+    catalog, snapshot_exported = export_catalog_snapshot(
+        database_path,
+        catalog_path,
+    )
+    failures_exported = True
 
     if failures is not None:
-        write_json(Path(failures_path), failures)
+        failures_exported = write_json(Path(failures_path), failures)
 
-    return catalog
+    return catalog, snapshot_exported, failures_exported
 
 
 def build_failure(mal_id, title, stage, reason):
@@ -419,7 +477,6 @@ def build_catalog(
                 "failure": None,
             }
 
-    processed_attempts = 0
     pass_delays = (0, *retry_delays)
 
     for pass_number, retry_delay in enumerate(pass_delays, start=1):
@@ -436,13 +493,9 @@ def build_catalog(
         for anime_id in list(pending_by_id):
             pending_record = pending_by_id[anime_id]
             catalog_record = attempt_catalog_record(pending_record, database_path)
-            processed_attempts += 1
 
             if catalog_record is not None:
                 del pending_by_id[anime_id]
-
-            if processed_attempts % CHECKPOINT_INTERVAL == 0:
-                save_build_progress(database_path, catalog_path, failures_path)
 
     unresolved_failures = [
         pending_record["failure"]
@@ -455,12 +508,26 @@ def build_catalog(
         for pending_record in pending_by_id.values()
     ]
     final_failures = deduplicate_failures([*failures, *unresolved_failures])
-    catalog = save_build_progress(
+    catalog, snapshot_exported, failures_exported = export_build_outputs(
         database_path,
         catalog_path,
         failures_path,
         final_failures,
     )
+
+    if not snapshot_exported:
+        print("\nDatabase ingestion completed successfully.")
+
+        if failures_exported:
+            print(
+                "Only the readable JSON catalog snapshot export failed. "
+                "The complete snapshot can be regenerated from SQLite on a later run."
+            )
+        else:
+            print(
+                "Secondary catalog and failure-report JSON exports failed. "
+                "All successfully ingested data remains stored in SQLite."
+            )
 
     return catalog, final_failures
 

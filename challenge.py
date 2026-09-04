@@ -17,7 +17,8 @@ ANIME_PER_CATEGORY = 6
 MAX_GENERATION_ATTEMPTS = 500
 RECENT_ANIME_DAYS = 7
 RECENT_MATCHUP_DAYS = 90
-EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
+DISPLAY_MEDIA_TYPES = {"tv", "movie", "ona", "ova", "special", "tv_special"}
+EPISODIC_MEDIA_TYPES = DISPLAY_MEDIA_TYPES - {"movie"}
 
 CATEGORY_RULES = [
     {
@@ -68,6 +69,18 @@ def get_comparison_value(anime, metric):
     return value
 
 
+def has_eligible_display_type(anime, category):
+    media_type = anime.get("type")
+
+    if category["name"] == "Longer Runtime":
+        return media_type == "movie"
+
+    if category["name"] == "More Episodes":
+        return media_type in EPISODIC_MEDIA_TYPES
+
+    return media_type in DISPLAY_MEDIA_TYPES
+
+
 def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     mal_id = anime.get("mal_id")
 
@@ -78,13 +91,7 @@ def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     ):
         return False
 
-    if category["name"] == "Longer Runtime" and anime.get("type") != "movie":
-        return False
-
-    if (
-        category["name"] == "More Episodes"
-        and anime.get("type") not in EPISODIC_MEDIA_TYPES
-    ):
+    if not has_eligible_display_type(anime, category):
         return False
 
     if category["name"] == "More Popular" and anime.get("popularity_rank") is None:
