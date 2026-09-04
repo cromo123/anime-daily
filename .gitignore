@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .env
 AGENTS.md
+data/catalog_failures.json
