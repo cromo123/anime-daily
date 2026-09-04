@@ -17,8 +17,22 @@ CREATE TABLE IF NOT EXISTS anime (
     series_episodes INTEGER,
     release_date TEXT,
     type TEXT,
-    runtime_minutes INTEGER
+    runtime_minutes INTEGER,
+    relations_fetched INTEGER NOT NULL DEFAULT 0
 )
+"""
+
+CREATE_INGESTION_TABLES = """
+CREATE TABLE IF NOT EXISTS anime_relations (
+    source_mal_id INTEGER NOT NULL,
+    target_mal_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL,
+    PRIMARY KEY (source_mal_id, target_mal_id, relation_type),
+    FOREIGN KEY (source_mal_id) REFERENCES anime(mal_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS anime_relations_target_index
+ON anime_relations(target_mal_id);
 """
 
 CREATE_HISTORY_TABLES = """
@@ -80,17 +94,20 @@ INSERT INTO anime (
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(mal_id) DO UPDATE SET
-    title = excluded.title,
-    image_url = excluded.image_url,
-    score = excluded.score,
-    popularity_rank = excluded.popularity_rank,
-    members = excluded.members,
-    entry_episodes = excluded.entry_episodes,
-    series_episodes = excluded.series_episodes,
-    release_date = excluded.release_date,
-    type = excluded.type,
-    runtime_minutes = excluded.runtime_minutes
+    title = COALESCE(excluded.title, anime.title),
+    image_url = COALESCE(excluded.image_url, anime.image_url),
+    score = COALESCE(excluded.score, anime.score),
+    popularity_rank = COALESCE(excluded.popularity_rank, anime.popularity_rank),
+    members = COALESCE(excluded.members, anime.members),
+    entry_episodes = COALESCE(excluded.entry_episodes, anime.entry_episodes),
+    series_episodes = COALESCE(excluded.series_episodes, anime.series_episodes),
+    release_date = COALESCE(excluded.release_date, anime.release_date),
+    type = COALESCE(excluded.type, anime.type),
+    runtime_minutes = COALESCE(excluded.runtime_minutes, anime.runtime_minutes)
 """
+
+EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
+MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
 
 
 def _connect_database(database_path):
@@ -106,6 +123,12 @@ def _migrate_anime_table(connection):
 
     if "image_url" not in column_names:
         connection.execute("ALTER TABLE anime ADD COLUMN image_url TEXT")
+
+    if "relations_fetched" not in column_names:
+        connection.execute(
+            "ALTER TABLE anime "
+            "ADD COLUMN relations_fetched INTEGER NOT NULL DEFAULT 0"
+        )
 
 
 def _parse_challenge_date(challenge_date):
@@ -133,6 +156,7 @@ def initialize_database(database_path=DATABASE_PATH):
     try:
         connection.execute(CREATE_ANIME_TABLE)
         _migrate_anime_table(connection)
+        connection.executescript(CREATE_INGESTION_TABLES)
         connection.executescript(CREATE_HISTORY_TABLES)
         connection.commit()
     finally:
@@ -169,6 +193,286 @@ def upsert_anime_records(anime_records, database_path=DATABASE_PATH):
         connection.close()
 
     return len(rows)
+
+
+def load_anime_ingestion_record(anime_id, database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        row = connection.execute(
+            """
+            SELECT
+                mal_id,
+                title,
+                image_url,
+                score,
+                popularity_rank,
+                members,
+                entry_episodes,
+                series_episodes,
+                release_date,
+                type,
+                runtime_minutes,
+                relations_fetched
+            FROM anime
+            WHERE mal_id = ?
+            """,
+            (anime_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    return dict(row) if row is not None else None
+
+
+def store_anime_relations(anime_id, relations, database_path=DATABASE_PATH):
+    """Replace one successfully fetched relationship list atomically.
+
+    An empty list is meaningful: the fetched flag distinguishes it from a list
+    that has never been fetched or whose request failed.
+    """
+    initialize_database(database_path)
+    relation_rows = {
+        (
+            anime_id,
+            relation.get("mal_id"),
+            relation.get("relation_type"),
+        )
+        for relation in relations
+        if relation.get("mal_id") is not None
+        and relation.get("relation_type") is not None
+    }
+    connection = _connect_database(database_path)
+
+    try:
+        anime_state = connection.execute(
+            "SELECT relations_fetched FROM anime WHERE mal_id = ?",
+            (anime_id,),
+        ).fetchone()
+
+        if anime_state is None:
+            raise ValueError(
+                f"Cannot store relationships before anime {anime_id} is stored."
+            )
+
+        existing_rows = set(
+            connection.execute(
+                """
+                SELECT source_mal_id, target_mal_id, relation_type
+                FROM anime_relations
+                WHERE source_mal_id = ?
+                """,
+                (anime_id,),
+            ).fetchall()
+        )
+
+        if anime_state[0] and existing_rows == relation_rows:
+            return len(relation_rows)
+
+        connection.execute(
+            "DELETE FROM anime_relations WHERE source_mal_id = ?",
+            (anime_id,),
+        )
+        connection.executemany(
+            """
+            INSERT INTO anime_relations (
+                source_mal_id,
+                target_mal_id,
+                relation_type
+            )
+            VALUES (?, ?, ?)
+            """,
+            relation_rows,
+        )
+        connection.execute(
+            "UPDATE anime SET relations_fetched = 1 WHERE mal_id = ?",
+            (anime_id,),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return len(relation_rows)
+
+
+def load_anime_relations(anime_id, database_path=DATABASE_PATH):
+    """Return None when relations are unresolved, including after a failure."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        anime = connection.execute(
+            "SELECT relations_fetched FROM anime WHERE mal_id = ?",
+            (anime_id,),
+        ).fetchone()
+
+        if anime is None or not anime["relations_fetched"]:
+            return None
+
+        rows = connection.execute(
+            """
+            SELECT target_mal_id AS mal_id, relation_type
+            FROM anime_relations
+            WHERE source_mal_id = ?
+            ORDER BY target_mal_id, relation_type
+            """,
+            (anime_id,),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [dict(row) for row in rows]
+
+
+def load_mainline_neighbor_ids(anime_id, database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    placeholders = ", ".join("?" for _ in MAINLINE_RELATION_TYPES)
+    relation_types = tuple(sorted(MAINLINE_RELATION_TYPES))
+
+    try:
+        rows = connection.execute(
+            f"""
+            SELECT target_mal_id
+            FROM anime_relations
+            WHERE source_mal_id = ?
+              AND relation_type IN ({placeholders})
+            UNION
+            SELECT source_mal_id
+            FROM anime_relations
+            WHERE target_mal_id = ?
+              AND relation_type IN ({placeholders})
+            """,
+            (anime_id, *relation_types, anime_id, *relation_types),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return {row[0] for row in rows}
+
+
+def resolve_and_store_series_episode_count(
+    anime_id,
+    database_path=DATABASE_PATH,
+):
+    """Resolve a complete stored mainline component and cache its shared total."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    anime_ids_to_visit = [anime_id]
+    visited_anime_ids = set()
+    episode_total = 0
+    relation_placeholders = ", ".join("?" for _ in MAINLINE_RELATION_TYPES)
+    relation_types = tuple(sorted(MAINLINE_RELATION_TYPES))
+
+    try:
+        while anime_ids_to_visit:
+            current_anime_id = anime_ids_to_visit.pop()
+
+            if current_anime_id in visited_anime_ids:
+                continue
+
+            anime = connection.execute(
+                """
+                SELECT mal_id, type, entry_episodes, relations_fetched
+                FROM anime
+                WHERE mal_id = ?
+                """,
+                (current_anime_id,),
+            ).fetchone()
+
+            if anime is None or not anime["relations_fetched"]:
+                return None
+
+            visited_anime_ids.add(current_anime_id)
+
+            if anime["type"] in EPISODIC_MEDIA_TYPES:
+                entry_episodes = anime["entry_episodes"]
+
+                if entry_episodes is not None:
+                    episode_total += entry_episodes
+
+            neighbor_rows = connection.execute(
+                f"""
+                SELECT target_mal_id AS mal_id
+                FROM anime_relations
+                WHERE source_mal_id = ?
+                  AND relation_type IN ({relation_placeholders})
+                UNION
+                SELECT source_mal_id AS mal_id
+                FROM anime_relations
+                WHERE target_mal_id = ?
+                  AND relation_type IN ({relation_placeholders})
+                """,
+                (
+                    current_anime_id,
+                    *relation_types,
+                    current_anime_id,
+                    *relation_types,
+                ),
+            ).fetchall()
+
+            for row in neighbor_rows:
+                if row["mal_id"] not in visited_anime_ids:
+                    anime_ids_to_visit.append(row["mal_id"])
+
+        placeholders = ", ".join("?" for _ in visited_anime_ids)
+        connection.execute(
+            f"""
+            UPDATE anime
+            SET series_episodes = ?
+            WHERE mal_id IN ({placeholders})
+            """,
+            (episode_total, *visited_anime_ids),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return episode_total
+
+
+def load_ingestion_summary(database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        total_anime = connection.execute("SELECT COUNT(*) FROM anime").fetchone()[0]
+        relationship_rows = connection.execute(
+            "SELECT COUNT(*) FROM anime_relations"
+        ).fetchone()[0]
+        resolved_series = connection.execute(
+            "SELECT COUNT(*) FROM anime WHERE series_episodes IS NOT NULL"
+        ).fetchone()[0]
+        missing_series = total_anime - resolved_series
+        media_type_counts = dict(
+            connection.execute(
+                """
+                SELECT COALESCE(type, 'unknown'), COUNT(*)
+                FROM anime
+                GROUP BY COALESCE(type, 'unknown')
+                """
+            ).fetchall()
+        )
+    finally:
+        connection.close()
+
+    return {
+        "total_anime": total_anime,
+        "relationship_rows": relationship_rows,
+        "resolved_series": resolved_series,
+        "missing_series": missing_series,
+        "media_type_counts": media_type_counts,
+    }
 
 
 def load_anime_records(database_path=DATABASE_PATH):

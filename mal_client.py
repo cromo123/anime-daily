@@ -15,15 +15,19 @@ if mal_client_id is None:
 MAX_REQUEST_ATTEMPTS = 3
 _anime_cache = {}
 _related_anime_cache = {}
+_mal_api_request_count = 0
 
 
 def _request_mal(url, params):
+    global _mal_api_request_count
+
     headers = {
         "X-MAL-CLIENT-ID": mal_client_id,
     }
 
     for attempt_number in range(1, MAX_REQUEST_ATTEMPTS + 1):
         try:
+            _mal_api_request_count += 1
             response = httpx.get(
                 url,
                 headers=headers,
@@ -55,6 +59,11 @@ def _request_mal(url, params):
             return None
 
     return None
+
+
+def get_mal_api_request_count():
+    """Return the number of MAL HTTP attempts made by this Python process."""
+    return _mal_api_request_count
 
 
 def fetch_anime_ranking(ranking_type, limit=100, offset=0):

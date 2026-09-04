@@ -1,12 +1,25 @@
+import argparse
 import json
 import time
-from collections import Counter
 from pathlib import Path
 
+from database import (
+    DATABASE_PATH,
+    initialize_database,
+    load_anime_ingestion_record,
+    load_anime_records,
+    load_anime_relations,
+    load_ingestion_summary,
+    load_mainline_neighbor_ids,
+    resolve_and_store_series_episode_count,
+    store_anime_relations,
+    upsert_anime_records,
+)
 from mal_client import (
     fetch_anime,
     fetch_anime_ranking,
-    fetch_series_episode_count,
+    fetch_related_anime,
+    get_mal_api_request_count,
 )
 
 
@@ -23,6 +36,7 @@ FAILURES_PATH = DATA_DIRECTORY / "catalog_failures.json"
 REQUIRED_CATALOG_FIELDS = {
     "mal_id",
     "title",
+    "image_url",
     "score",
     "popularity_rank",
     "members",
@@ -170,89 +184,238 @@ def sorted_catalog(catalog_by_id):
     return sorted(catalog_by_id.values(), key=lambda anime: anime["mal_id"])
 
 
-def save_build_progress(catalog_by_id, failures=None):
-    write_json(CATALOG_PATH, sorted_catalog(catalog_by_id))
+def export_catalog_snapshot(database_path=DATABASE_PATH, catalog_path=CATALOG_PATH):
+    catalog = [
+        anime
+        for anime in load_anime_records(database_path)
+        if anime.get("series_episodes") is not None
+    ]
+    write_json(Path(catalog_path), catalog)
+    return catalog
+
+
+def import_existing_snapshot(catalog_path=CATALOG_PATH, database_path=DATABASE_PATH):
+    existing_catalog = load_json_list(Path(catalog_path))
+    reusable_records = [
+        record
+        for record in existing_catalog
+        if isinstance(record, dict)
+        and record.get("mal_id") is not None
+        and record.get("title") is not None
+    ]
+
+    if reusable_records:
+        upsert_anime_records(reusable_records, database_path)
+
+    return len(reusable_records)
+
+
+def save_build_progress(
+    database_path=DATABASE_PATH,
+    catalog_path=CATALOG_PATH,
+    failures_path=FAILURES_PATH,
+    failures=None,
+):
+    catalog = export_catalog_snapshot(database_path, catalog_path)
 
     if failures is not None:
-        write_json(FAILURES_PATH, failures)
+        write_json(Path(failures_path), failures)
+
+    return catalog
 
 
-def attempt_catalog_record(pending_record):
+def build_failure(mal_id, title, stage, reason):
+    return {
+        "mal_id": mal_id,
+        "title": title,
+        "stage": stage,
+        "reason": reason,
+    }
+
+
+def deduplicate_failures(failures):
+    unique_failures = []
+    seen_failures = set()
+
+    for failure in failures:
+        key = (
+            failure.get("mal_id"),
+            failure.get("stage"),
+            failure.get("reason"),
+        )
+
+        if key not in seen_failures:
+            seen_failures.add(key)
+            unique_failures.append(failure)
+
+    return unique_failures
+
+
+def fetch_and_store_anime(anime_id, title, database_path):
+    anime = load_anime_ingestion_record(anime_id, database_path)
+
+    if anime is not None:
+        return anime, None
+
+    print(f"Fetching MAL anime {anime_id}: {title or 'Unknown title'}")
+
+    try:
+        fetched_anime = fetch_anime(anime_id)
+    except Exception as error:
+        return None, build_failure(
+            anime_id,
+            title,
+            "anime_details",
+            f"{type(error).__name__}: {error}",
+        )
+
+    if fetched_anime is None:
+        return None, build_failure(
+            anime_id,
+            title,
+            "anime_details",
+            "Anime details could not be fetched after retries.",
+        )
+
+    upsert_anime_records([fetched_anime], database_path)
+    return load_anime_ingestion_record(anime_id, database_path), None
+
+
+def fetch_and_store_relations(anime, database_path):
+    anime_id = anime["mal_id"]
+    relations = load_anime_relations(anime_id, database_path)
+
+    if relations is not None:
+        return relations, None
+
+    print(f"Fetching MAL relationships for {anime_id}: {anime['title']}")
+
+    try:
+        fetched_relations = fetch_related_anime(anime_id)
+    except Exception as error:
+        return None, build_failure(
+            anime_id,
+            anime["title"],
+            "anime_relations",
+            f"{type(error).__name__}: {error}",
+        )
+
+    if fetched_relations is None:
+        return None, build_failure(
+            anime_id,
+            anime["title"],
+            "anime_relations",
+            "Anime relationships could not be fetched after retries.",
+        )
+
+    store_anime_relations(anime_id, fetched_relations, database_path)
+    return fetched_relations, None
+
+
+def resolve_series_graph(anime_id, title, database_path):
+    anime_ids_to_visit = [anime_id]
+    visited_anime_ids = set()
+    known_titles = {anime_id: title}
+
+    while anime_ids_to_visit:
+        current_anime_id = anime_ids_to_visit.pop()
+
+        if current_anime_id in visited_anime_ids:
+            continue
+
+        anime, failure = fetch_and_store_anime(
+            current_anime_id,
+            known_titles.get(current_anime_id),
+            database_path,
+        )
+
+        if failure is not None:
+            return None, failure
+
+        relations, failure = fetch_and_store_relations(anime, database_path)
+
+        if failure is not None:
+            return None, failure
+
+        visited_anime_ids.add(current_anime_id)
+
+        for relation in relations:
+            related_anime_id = relation["mal_id"]
+
+            if relation["relation_type"] in {"prequel", "sequel"}:
+                if relation.get("title"):
+                    known_titles[related_anime_id] = relation["title"]
+
+        for related_anime_id in load_mainline_neighbor_ids(
+            current_anime_id,
+            database_path,
+        ):
+            if related_anime_id not in visited_anime_ids:
+                anime_ids_to_visit.append(related_anime_id)
+
+    series_episodes = resolve_and_store_series_episode_count(
+        anime_id,
+        database_path,
+    )
+
+    if series_episodes is None:
+        return None, build_failure(
+            anime_id,
+            title,
+            "series_episodes",
+            "The persisted mainline graph is incomplete; no partial total was saved.",
+        )
+
+    return series_episodes, None
+
+
+def attempt_catalog_record(pending_record, database_path=DATABASE_PATH):
     candidate = pending_record["candidate"]
     anime_id = candidate["mal_id"]
     title = candidate.get("title")
-    anime = pending_record.get("anime")
+    anime = load_anime_ingestion_record(anime_id, database_path)
 
-    if anime is None:
-        print(f"Fetching MAL anime {anime_id}: {title or 'Unknown title'}")
+    if anime is not None and anime["series_episodes"] is not None:
+        return anime
 
-        try:
-            anime = fetch_anime(anime_id)
-        except Exception as error:
-            pending_record["failure"] = {
-                "mal_id": anime_id,
-                "title": title,
-                "stage": "anime_details",
-                "reason": f"{type(error).__name__}: {error}",
-            }
-            return None
+    _, failure = resolve_series_graph(anime_id, title, database_path)
 
-        if anime is None:
-            pending_record["failure"] = {
-                "mal_id": anime_id,
-                "title": title,
-                "stage": "anime_details",
-                "reason": "Anime details could not be fetched after retries.",
-            }
-            return None
-
-        pending_record["anime"] = anime
-
-    try:
-        series_episodes = fetch_series_episode_count(anime_id)
-    except Exception as error:
-        pending_record["failure"] = {
-            "mal_id": anime_id,
-            "title": anime["title"],
-            "stage": "series_episodes",
-            "reason": f"{type(error).__name__}: {error}",
-        }
+    if failure is not None:
+        pending_record["failure"] = failure
         return None
 
-    if series_episodes is None:
-        pending_record["failure"] = {
-            "mal_id": anime_id,
-            "title": anime["title"],
-            "stage": "series_episodes",
-            "reason": "Series episode total could not be determined reliably.",
-        }
-        return None
-
-    catalog_record = anime.copy()
-    catalog_record["series_episodes"] = series_episodes
-    return catalog_record
+    return load_anime_ingestion_record(anime_id, database_path)
 
 
-def build_catalog(candidates, failures=None, retry_delays=BATCH_RETRY_DELAYS):
+def build_catalog(
+    candidates,
+    failures=None,
+    retry_delays=BATCH_RETRY_DELAYS,
+    database_path=DATABASE_PATH,
+    catalog_path=CATALOG_PATH,
+    failures_path=FAILURES_PATH,
+):
     if failures is None:
         failures = []
 
-    existing_catalog = load_json_list(CATALOG_PATH)
-    catalog_by_id = {
-        record["mal_id"]: record
-        for record in existing_catalog
-        if is_complete_catalog_record(record)
-    }
+    database_path = Path(database_path)
+    catalog_path = Path(catalog_path)
+    failures_path = Path(failures_path)
+    initialize_database(database_path)
+    import_existing_snapshot(catalog_path, database_path)
 
     pending_by_id = {}
 
     for candidate in candidates:
         anime_id = candidate["mal_id"]
+        stored_anime = load_anime_ingestion_record(anime_id, database_path)
 
-        if anime_id not in catalog_by_id and anime_id not in pending_by_id:
+        if (
+            (stored_anime is None or stored_anime["series_episodes"] is None)
+            and anime_id not in pending_by_id
+        ):
             pending_by_id[anime_id] = {
                 "candidate": candidate,
-                "anime": None,
                 "failure": None,
             }
 
@@ -272,43 +435,99 @@ def build_catalog(candidates, failures=None, retry_delays=BATCH_RETRY_DELAYS):
 
         for anime_id in list(pending_by_id):
             pending_record = pending_by_id[anime_id]
-            catalog_record = attempt_catalog_record(pending_record)
+            catalog_record = attempt_catalog_record(pending_record, database_path)
             processed_attempts += 1
 
             if catalog_record is not None:
-                catalog_by_id[anime_id] = catalog_record
                 del pending_by_id[anime_id]
 
             if processed_attempts % CHECKPOINT_INTERVAL == 0:
-                save_build_progress(catalog_by_id)
+                save_build_progress(database_path, catalog_path, failures_path)
 
     unresolved_failures = [
-        pending_record["failure"] for pending_record in pending_by_id.values()
+        pending_record["failure"]
+        or build_failure(
+            pending_record["candidate"]["mal_id"],
+            pending_record["candidate"].get("title"),
+            "catalog_build",
+            "The record is still unresolved after all retry passes.",
+        )
+        for pending_record in pending_by_id.values()
     ]
-    final_failures = [*failures, *unresolved_failures]
-    save_build_progress(catalog_by_id, final_failures)
-
-    return sorted_catalog(catalog_by_id), final_failures
-
-
-def print_summary(candidate_count, catalog, failures):
-    media_type_counts = Counter(
-        anime.get("type") or "unknown" for anime in catalog
+    final_failures = deduplicate_failures([*failures, *unresolved_failures])
+    catalog = save_build_progress(
+        database_path,
+        catalog_path,
+        failures_path,
+        final_failures,
     )
 
+    return catalog, final_failures
+
+
+def print_summary(
+    candidate_count,
+    failures,
+    database_path,
+    newly_added,
+    existing_reused,
+    api_requests,
+):
+    summary = load_ingestion_summary(database_path)
+    media_type_counts = summary["media_type_counts"]
+
     print("\nCatalog build summary")
-    print(f"Candidates discovered: {candidate_count}")
-    print(f"Total catalog records currently stored: {len(catalog)}")
-    print(f"Failures: {len(failures)}")
+    print(f"Candidates discovered this run: {candidate_count}")
+    print(f"Total anime stored in SQLite: {summary['total_anime']}")
+    print(f"Newly added anime: {newly_added}")
+    print(f"Existing anime reused: {existing_reused}")
+    print(f"Unresolved failures: {len(failures)}")
     print(f"Movie count: {media_type_counts.get('movie', 0)}")
+    print(f"Relationship rows stored: {summary['relationship_rows']}")
+    print(f"Anime with resolved series_episodes: {summary['resolved_series']}")
+    print(f"Anime missing series_episodes: {summary['missing_series']}")
+    print(f"MAL API request attempts this run: approximately {api_requests}")
     print("Media type counts:")
 
     for media_type, count in sorted(media_type_counts.items()):
         print(f"  {media_type}: {count}")
 
 
-def main():
-    candidates, discovery_failures = discover_candidates()
+def positive_integer(value):
+    integer_value = int(value)
+
+    if integer_value <= 0:
+        raise argparse.ArgumentTypeError("limits must be positive integers")
+
+    return integer_value
+
+
+def parse_arguments(arguments=None):
+    parser = argparse.ArgumentParser(
+        description="Build or resume the local MAL anime catalog."
+    )
+    parser.add_argument(
+        "--anime-limit",
+        type=positive_integer,
+        default=POPULAR_CANDIDATE_TARGET,
+        help="number of popularity-ranking candidates to discover",
+    )
+    parser.add_argument(
+        "--movie-limit",
+        type=positive_integer,
+        default=MOVIE_CANDIDATE_TARGET,
+        help="number of movie-ranking candidates to discover",
+    )
+    return parser.parse_args(arguments)
+
+
+def main(arguments=None):
+    args = parse_arguments(arguments)
+    request_count_before = get_mal_api_request_count()
+    candidates, discovery_failures = discover_candidates(
+        popular_target=args.anime_limit,
+        movie_target=args.movie_limit,
+    )
 
     if not candidates:
         write_json(FAILURES_PATH, discovery_failures)
@@ -316,8 +535,27 @@ def main():
             "No MAL ranking candidates were discovered. See catalog_failures.json."
         )
 
-    catalog, failures = build_catalog(candidates, discovery_failures)
-    print_summary(len(candidates), catalog, failures)
+    initialize_database(DATABASE_PATH)
+    import_existing_snapshot(CATALOG_PATH, DATABASE_PATH)
+    anime_ids_before = {
+        anime["mal_id"] for anime in load_anime_records(DATABASE_PATH)
+    }
+    candidate_ids = {candidate["mal_id"] for candidate in candidates}
+    existing_reused = len(candidate_ids & anime_ids_before)
+
+    _, failures = build_catalog(candidates, discovery_failures)
+    anime_ids_after = {
+        anime["mal_id"] for anime in load_anime_records(DATABASE_PATH)
+    }
+    request_count_after = get_mal_api_request_count()
+    print_summary(
+        len(candidates),
+        failures,
+        DATABASE_PATH,
+        newly_added=len(anime_ids_after - anime_ids_before),
+        existing_reused=existing_reused,
+        api_requests=request_count_after - request_count_before,
+    )
 
 
 if __name__ == "__main__":
