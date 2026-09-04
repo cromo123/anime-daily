@@ -1,94 +1,287 @@
 import json
+from collections import Counter
 from pathlib import Path
 
-from mal_client import fetch_anime, fetch_series_episode_count
+from mal_client import (
+    fetch_anime,
+    fetch_anime_ranking,
+    fetch_series_episode_count,
+)
 
 
-# Local seed list for the first catalog build.
-ANIME_IDS = [
-    # Popular, multi-season, older, and newer series
-    5114,   # Fullmetal Alchemist: Brotherhood
-    16498,  # Attack on Titan
-    1535,   # Death Note
-    9253,   # Steins;Gate
-    11061,  # Hunter x Hunter (2011)
-    21,     # One Piece
-    20,     # Naruto
-    1735,   # Naruto: Shippuden
-    269,    # Bleach
-    38000,  # Demon Slayer
-    40748,  # Jujutsu Kaisen
-    31964,  # My Hero Academia
-    30276,  # One Punch Man
-    11757,  # Sword Art Online
-    19815,  # No Game No Life
-    20583,  # Haikyu!!
-    32182,  # Mob Psycho 100
-    38691,  # Dr. Stone
-    37521,  # Vinland Saga
-    52991,  # Frieren: Beyond Journey's End
-    44511,  # Chainsaw Man
-    235,    # Detective Conan
-    1575,   # Code Geass
-    30,     # Neon Genesis Evangelion
-    19,     # Monster
-    # Movies with varied runtimes
-    199,    # Spirited Away
-    32281,  # Your Name
-    164,    # Princess Mononoke
-    47,     # Akira
-    28851,  # A Silent Voice
-    437,    # Perfect Blue
-    43,     # Ghost in the Shell
-    6675,   # Redline
-    2236,   # The Girl Who Leapt Through Time
-    38826,  # Weathering with You
-    50594,  # Suzume
-    12355,  # Wolf Children
-]
+POPULAR_CANDIDATE_TARGET = 350
+MOVIE_CANDIDATE_TARGET = 75
+DISCOVERY_PAGE_SIZE = 100
+CHECKPOINT_INTERVAL = 10
 
-CATALOG_PATH = Path(__file__).parent / "data" / "anime_catalog.json"
+DATA_DIRECTORY = Path(__file__).parent / "data"
+CATALOG_PATH = DATA_DIRECTORY / "anime_catalog.json"
+FAILURES_PATH = DATA_DIRECTORY / "catalog_failures.json"
+
+REQUIRED_CATALOG_FIELDS = {
+    "mal_id",
+    "title",
+    "score",
+    "popularity_rank",
+    "members",
+    "entry_episodes",
+    "series_episodes",
+    "release_date",
+    "type",
+    "runtime_minutes",
+}
 
 
-def build_catalog():
-    catalog = []
+def load_json_list(path):
+    if not path.exists():
+        return []
 
-    for anime_id in ANIME_IDS:
-        print(f"Fetching MAL anime {anime_id}...")
-        anime = fetch_anime(anime_id)
+    try:
+        with path.open(encoding="utf-8") as json_file:
+            data = json.load(json_file)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"{path} does not contain valid JSON.") from error
 
-        if anime is None:
-            print(f"Skipping MAL anime {anime_id} because it could not be fetched.")
-            continue
+    if not isinstance(data, list):
+        raise RuntimeError(f"{path} must contain a JSON list.")
 
-        series_episodes = fetch_series_episode_count(anime_id)
+    return data
 
-        if series_episodes is None:
-            print(
-                f"Skipping MAL anime {anime_id} because its series episode total "
-                "could not be determined reliably."
+
+def write_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+
+    with temporary_path.open("w", encoding="utf-8") as json_file:
+        json.dump(data, json_file, ensure_ascii=False, indent=2)
+        json_file.write("\n")
+
+    temporary_path.replace(path)
+
+
+def add_failure(failures, mal_id, title, stage, reason):
+    failures.append(
+        {
+            "mal_id": mal_id,
+            "title": title,
+            "stage": stage,
+            "reason": reason,
+        }
+    )
+
+
+def discover_ranking_candidates(ranking_type, target, page_size, failures):
+    candidates = []
+    discovered_ids = set()
+    offset = 0
+
+    while len(candidates) < target:
+        request_limit = min(page_size, target - len(candidates))
+
+        try:
+            page = fetch_anime_ranking(
+                ranking_type,
+                limit=request_limit,
+                offset=offset,
             )
-            continue
+        except Exception as error:
+            add_failure(
+                failures,
+                None,
+                None,
+                f"candidate_discovery:{ranking_type}",
+                f"{type(error).__name__}: {error}",
+            )
+            break
 
-        catalog_record = anime.copy()
-        catalog_record["series_episodes"] = series_episodes
-        catalog.append(catalog_record)
+        if page is None:
+            add_failure(
+                failures,
+                None,
+                None,
+                f"candidate_discovery:{ranking_type}",
+                "MAL ranking request failed after retries.",
+            )
+            break
 
-    return catalog
+        if not page:
+            break
+
+        for candidate in page:
+            mal_id = candidate.get("mal_id")
+
+            if mal_id is not None and mal_id not in discovered_ids:
+                discovered_ids.add(mal_id)
+                candidates.append(candidate)
+
+                if len(candidates) == target:
+                    break
+
+        offset += len(page)
+
+        if len(page) < request_limit:
+            break
+
+    return candidates
 
 
-def save_catalog(catalog):
-    CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+def discover_candidates(
+    popular_target=POPULAR_CANDIDATE_TARGET,
+    movie_target=MOVIE_CANDIDATE_TARGET,
+    page_size=DISCOVERY_PAGE_SIZE,
+):
+    failures = []
+    popular_candidates = discover_ranking_candidates(
+        "bypopularity",
+        popular_target,
+        page_size,
+        failures,
+    )
+    movie_candidates = discover_ranking_candidates(
+        "movie",
+        movie_target,
+        page_size,
+        failures,
+    )
 
-    with CATALOG_PATH.open("w", encoding="utf-8") as catalog_file:
-        json.dump(catalog, catalog_file, ensure_ascii=False, indent=2)
-        catalog_file.write("\n")
+    candidates_by_id = {}
+
+    for candidate in popular_candidates + movie_candidates:
+        mal_id = candidate["mal_id"]
+
+        if mal_id not in candidates_by_id:
+            candidates_by_id[mal_id] = candidate
+
+    return list(candidates_by_id.values()), failures
+
+
+def is_complete_catalog_record(record):
+    return (
+        isinstance(record, dict)
+        and REQUIRED_CATALOG_FIELDS.issubset(record)
+        and record["mal_id"] is not None
+        and record["series_episodes"] is not None
+    )
+
+
+def sorted_catalog(catalog_by_id):
+    return sorted(catalog_by_id.values(), key=lambda anime: anime["mal_id"])
+
+
+def save_build_progress(catalog_by_id, failures):
+    write_json(CATALOG_PATH, sorted_catalog(catalog_by_id))
+    write_json(FAILURES_PATH, failures)
+
+
+def build_catalog(candidates, failures=None):
+    if failures is None:
+        failures = []
+
+    existing_catalog = load_json_list(CATALOG_PATH)
+    catalog_by_id = {
+        record["mal_id"]: record
+        for record in existing_catalog
+        if is_complete_catalog_record(record)
+    }
+
+    for candidate_number, candidate in enumerate(candidates, start=1):
+        anime_id = candidate["mal_id"]
+        title = candidate.get("title")
+
+        if anime_id not in catalog_by_id:
+            print(f"Fetching MAL anime {anime_id}: {title or 'Unknown title'}")
+
+            try:
+                anime = fetch_anime(anime_id)
+            except Exception as error:
+                anime = None
+                add_failure(
+                    failures,
+                    anime_id,
+                    title,
+                    "anime_details",
+                    f"{type(error).__name__}: {error}",
+                )
+
+            if anime is None:
+                if not any(
+                    failure["mal_id"] == anime_id
+                    and failure["stage"] == "anime_details"
+                    for failure in failures
+                ):
+                    add_failure(
+                        failures,
+                        anime_id,
+                        title,
+                        "anime_details",
+                        "Anime details could not be fetched after retries.",
+                    )
+            else:
+                try:
+                    series_episodes = fetch_series_episode_count(anime_id)
+                except Exception as error:
+                    series_episodes = None
+                    add_failure(
+                        failures,
+                        anime_id,
+                        anime["title"],
+                        "series_episodes",
+                        f"{type(error).__name__}: {error}",
+                    )
+
+                if series_episodes is None:
+                    if not any(
+                        failure["mal_id"] == anime_id
+                        and failure["stage"] == "series_episodes"
+                        for failure in failures
+                    ):
+                        add_failure(
+                            failures,
+                            anime_id,
+                            anime["title"],
+                            "series_episodes",
+                            "Series episode total could not be determined reliably.",
+                        )
+                else:
+                    catalog_record = anime.copy()
+                    catalog_record["series_episodes"] = series_episodes
+                    catalog_by_id[anime_id] = catalog_record
+
+        if candidate_number % CHECKPOINT_INTERVAL == 0:
+            save_build_progress(catalog_by_id, failures)
+
+    save_build_progress(catalog_by_id, failures)
+
+    return sorted_catalog(catalog_by_id), failures
+
+
+def print_summary(candidate_count, catalog, failures):
+    media_type_counts = Counter(
+        anime.get("type") or "unknown" for anime in catalog
+    )
+
+    print("\nCatalog build summary")
+    print(f"Candidates discovered: {candidate_count}")
+    print(f"Records successfully saved: {len(catalog)}")
+    print(f"Failures: {len(failures)}")
+    print(f"Movie count: {media_type_counts.get('movie', 0)}")
+    print("Media type counts:")
+
+    for media_type, count in sorted(media_type_counts.items()):
+        print(f"  {media_type}: {count}")
 
 
 def main():
-    catalog = build_catalog()
-    save_catalog(catalog)
-    print(f"Saved {len(catalog)} anime to {CATALOG_PATH}")
+    candidates, discovery_failures = discover_candidates()
+
+    if not candidates:
+        write_json(FAILURES_PATH, discovery_failures)
+        raise RuntimeError(
+            "No MAL ranking candidates were discovered. See catalog_failures.json."
+        )
+
+    catalog, failures = build_catalog(candidates, discovery_failures)
+    print_summary(len(candidates), catalog, failures)
 
 
 if __name__ == "__main__":

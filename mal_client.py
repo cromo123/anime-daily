@@ -57,6 +57,37 @@ def _request_mal(url, params):
     return None
 
 
+def fetch_anime_ranking(ranking_type, limit=100, offset=0):
+    url = "https://api.myanimelist.net/v2/anime/ranking"
+
+    params = {
+        "ranking_type": ranking_type,
+        "limit": limit,
+        "offset": offset,
+        "fields": "media_type",
+    }
+
+    response = _request_mal(url, params)
+
+    if response is None:
+        return None
+
+    data = response.json()
+    ranked_anime = []
+
+    for ranking_entry in data.get("data", []):
+        anime = ranking_entry["node"]
+        ranked_anime.append(
+            {
+                "mal_id": anime["id"],
+                "title": anime["title"],
+                "type": anime.get("media_type"),
+            }
+        )
+
+    return ranked_anime
+
+
 def fetch_anime(anime_id):
     if anime_id in _anime_cache:
         return _anime_cache[anime_id]
