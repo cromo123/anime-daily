@@ -17,6 +17,7 @@ ANIME_PER_CATEGORY = 6
 MAX_GENERATION_ATTEMPTS = 500
 RECENT_ANIME_DAYS = 7
 RECENT_MATCHUP_DAYS = 90
+EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
 
 CATEGORY_RULES = [
     {
@@ -78,6 +79,12 @@ def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
         return False
 
     if category["name"] == "Longer Runtime" and anime.get("type") != "movie":
+        return False
+
+    if (
+        category["name"] == "More Episodes"
+        and anime.get("type") not in EPISODIC_MEDIA_TYPES
+    ):
         return False
 
     if category["name"] == "More Popular" and anime.get("popularity_rank") is None:
