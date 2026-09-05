@@ -19,6 +19,19 @@ RECENT_ANIME_DAYS = 7
 RECENT_MATCHUP_DAYS = 90
 DISPLAY_MEDIA_TYPES = {"tv", "movie", "ona", "ova", "special", "tv_special"}
 EPISODIC_MEDIA_TYPES = DISPLAY_MEDIA_TYPES - {"movie"}
+POPULAR_RANK_PRIMARY_MAX = 1000
+POPULAR_RANK_SECONDARY_MAX = 3000
+# Repeating 5 makes a five-primary round four times as likely as a four-primary round.
+POPULARITY_PRIMARY_SLOT_OPTIONS = (4, 5, 5, 5, 5)
+POPULARITY_SECONDARY_SLOT_WEIGHT = 4
+POPULARITY_WILDCARD_SLOT_WEIGHT = 1
+RUNTIME_NORMAL_MINUTES = 40
+RUNTIME_SHORT_MINUTES = 20
+MAX_RUNTIME_SHORT_WILDCARDS = 1
+
+POPULARITY_PRIMARY = "primary"
+POPULARITY_SECONDARY = "secondary"
+POPULARITY_WILDCARD = "wildcard"
 
 CATEGORY_RULES = [
     {
@@ -82,6 +95,55 @@ def has_eligible_display_type(anime, category):
     return media_type in DISPLAY_MEDIA_TYPES
 
 
+def get_popularity_tier(anime):
+    popularity_rank = anime.get("popularity_rank")
+
+    if (
+        popularity_rank is not None
+        and popularity_rank <= POPULAR_RANK_PRIMARY_MAX
+    ):
+        return POPULARITY_PRIMARY
+
+    if (
+        popularity_rank is not None
+        and popularity_rank <= POPULAR_RANK_SECONDARY_MAX
+    ):
+        return POPULARITY_SECONDARY
+
+    return POPULARITY_WILDCARD
+
+
+def build_popularity_plan(random_source):
+    primary_slots = random_source.choice(POPULARITY_PRIMARY_SLOT_OPTIONS)
+    outlier_slots = ANIME_PER_CATEGORY - primary_slots
+    outlier_choices = (
+        [POPULARITY_SECONDARY] * POPULARITY_SECONDARY_SLOT_WEIGHT
+        + [POPULARITY_WILDCARD] * POPULARITY_WILDCARD_SLOT_WEIGHT
+    )
+    plan = [POPULARITY_PRIMARY] * primary_slots
+
+    for _ in range(outlier_slots):
+        plan.append(random_source.choice(outlier_choices))
+
+    random_source.shuffle(plan)
+    return plan
+
+
+def popularity_fallback_order(preferred_tier):
+    if preferred_tier == POPULARITY_PRIMARY:
+        return [POPULARITY_PRIMARY, POPULARITY_SECONDARY, POPULARITY_WILDCARD]
+
+    if preferred_tier == POPULARITY_SECONDARY:
+        return [POPULARITY_SECONDARY, POPULARITY_PRIMARY, POPULARITY_WILDCARD]
+
+    return [POPULARITY_WILDCARD, POPULARITY_SECONDARY, POPULARITY_PRIMARY]
+
+
+def is_short_runtime(anime):
+    runtime = anime.get("runtime_minutes")
+    return runtime is not None and runtime < RUNTIME_NORMAL_MINUTES
+
+
 def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     mal_id = anime.get("mal_id")
 
@@ -98,7 +160,45 @@ def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     if category["name"] == "More Popular" and anime.get("popularity_rank") is None:
         return False
 
+    if category["name"] == "Longer Runtime":
+        runtime = anime.get("runtime_minutes")
+
+        if runtime is None or runtime < RUNTIME_SHORT_MINUTES:
+            return False
+
     return get_comparison_value(anime, category["metric"]) is not None
+
+
+def choose_stratified_candidate(
+    candidates,
+    preferred_tier,
+    category,
+    short_runtime_count,
+    random_source,
+):
+    if category["name"] == "Longer Runtime":
+        normal_runtime_candidates = [
+            anime
+            for anime in candidates
+            if not is_short_runtime(anime)
+        ]
+
+        if normal_runtime_candidates:
+            candidates = normal_runtime_candidates
+        elif short_runtime_count >= MAX_RUNTIME_SHORT_WILDCARDS:
+            return None
+
+    for popularity_tier in popularity_fallback_order(preferred_tier):
+        tier_candidates = [
+            anime
+            for anime in candidates
+            if get_popularity_tier(anime) == popularity_tier
+        ]
+
+        if tier_candidates:
+            return random_source.choice(tier_candidates)
+
+    return None
 
 
 def select_category_anime(
@@ -115,61 +215,52 @@ def select_category_anime(
         if is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
             candidates_by_id[anime["mal_id"]] = anime
 
-    candidates_by_value = {}
-
-    for anime in candidates_by_id.values():
-        value = get_comparison_value(anime, category["metric"])
-        candidates_by_value.setdefault(value, []).append(anime)
-
-    for candidates in candidates_by_value.values():
-        random_source.shuffle(candidates)
+    available_candidates = list(candidates_by_id.values())
 
     selected_anime = []
     previous_value = None
     previous_anime = None
+    short_runtime_count = 0
+    popularity_plan = build_popularity_plan(random_source)
 
     while len(selected_anime) < ANIME_PER_CATEGORY:
-        available_candidates_by_value = {}
+        valid_next_candidates = []
 
-        for value, candidates in candidates_by_value.items():
+        for anime in available_candidates:
+            value = get_comparison_value(anime, category["metric"])
+
             if value == previous_value:
                 continue
 
-            available_candidates = []
+            if previous_anime is not None:
+                matchup_pair = normalize_matchup_pair(
+                    previous_anime["mal_id"],
+                    anime["mal_id"],
+                )
 
-            for anime in candidates:
-                if previous_anime is not None:
-                    matchup_pair = normalize_matchup_pair(
-                        previous_anime["mal_id"],
-                        anime["mal_id"],
-                    )
+                if matchup_pair in recent_matchup_pairs:
+                    continue
 
-                    if matchup_pair in recent_matchup_pairs:
-                        continue
+            valid_next_candidates.append(anime)
 
-                available_candidates.append(anime)
+        chosen_anime = choose_stratified_candidate(
+            valid_next_candidates,
+            popularity_plan[len(selected_anime)],
+            category,
+            short_runtime_count,
+            random_source,
+        )
 
-            if available_candidates:
-                available_candidates_by_value[value] = available_candidates
-
-        if not available_candidates_by_value:
+        if chosen_anime is None:
             return None
 
-        largest_group_size = max(
-            len(candidates)
-            for candidates in available_candidates_by_value.values()
-        )
-        largest_values = [
-            value
-            for value, candidates in available_candidates_by_value.items()
-            if len(candidates) == largest_group_size
-        ]
-        selected_value = random_source.choice(largest_values)
-        chosen_anime = random_source.choice(
-            available_candidates_by_value[selected_value]
-        )
-        candidates_by_value[selected_value].remove(chosen_anime)
+        selected_value = get_comparison_value(chosen_anime, category["metric"])
+        available_candidates.remove(chosen_anime)
         selected_anime.append(chosen_anime)
+
+        if category["name"] == "Longer Runtime" and is_short_runtime(chosen_anime):
+            short_runtime_count += 1
+
         previous_value = selected_value
         previous_anime = chosen_anime
 
