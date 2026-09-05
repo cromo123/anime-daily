@@ -15,6 +15,8 @@ const state = {
   waitingForAnswer: false,
   transitioning: false,
   revealedMetrics: new Map(),
+  selections: [],
+  completion: null,
 };
 
 let introSequence = 0;
@@ -44,6 +46,7 @@ const elements = {
   loadErrorMessage: document.querySelector("#load-error-message"),
   finalScore: document.querySelector("#final-score"),
   finalPercentage: document.querySelector("#final-percentage"),
+  resultsCopy: document.querySelector("#results-copy"),
   replayButton: document.querySelector("#replay-button"),
 };
 
@@ -404,6 +407,11 @@ async function submitAnswer(selectedMalId) {
 
     rememberRevealedMetrics(answer);
     state.answer = answer;
+    state.selections.push({
+      category: currentRound().name,
+      comparison_position: state.comparisonIndex + 1,
+      selected_mal_id: selectedMalId,
+    });
 
     if (answer.correct) {
       state.totalScore += 1;
@@ -489,13 +497,57 @@ async function animateRoundExit() {
   await wait(CHALLENGER_ENTER_MS);
 }
 
-function showResults() {
-  const percentage = Math.round((state.totalScore / TOTAL_COMPARISONS) * 100);
-  elements.finalScore.textContent = `${state.totalScore} / ${TOTAL_COMPARISONS}`;
-  elements.finalPercentage.textContent = `${percentage}% correct`;
+function showResults(completion) {
+  elements.finalScore.textContent = `${completion.verified_score} / ${completion.total_questions}`;
+  elements.finalPercentage.textContent = `${formatNumber(
+    completion.verified_percentage,
+    2,
+  )}% correct`;
+
+  if (completion.replay) {
+    elements.resultsCopy.textContent =
+      `Replay complete. Your official result remains ${completion.official_score} ` +
+      `/ ${completion.total_questions}.`;
+  } else {
+    elements.resultsCopy.textContent =
+      "Your verified score is saved as today’s official result.";
+  }
+
+  state.completion = completion;
   state.transitioning = false;
   showScreen(elements.resultsScreen);
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function submitCompletion() {
+  elements.nextButton.textContent = "Saving result…";
+  elements.nextButton.disabled = true;
+
+  try {
+    const challengeDate = encodeURIComponent(state.challenge.challenge_date);
+    const response = await fetch(`/challenge/${challengeDate}/complete`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ answers: state.selections }),
+    });
+    const completion = await readJsonResponse(response);
+    showResults(completion);
+  } catch (error) {
+    for (const card of elements.animeCards.children) {
+      card.classList.remove("round-exit");
+    }
+
+    elements.requestError.textContent = `${
+      error.message || "Your completed run could not be verified."
+    } Press the button to try saving the result again.`;
+    elements.requestError.hidden = false;
+    elements.nextButton.textContent = "Retry final result";
+    elements.nextButton.disabled = false;
+    state.transitioning = false;
+  }
 }
 
 async function advanceGame() {
@@ -519,7 +571,7 @@ async function advanceGame() {
     elements.answerMessage.hidden = true;
     showRoundIntro();
   } else {
-    showResults();
+    await submitCompletion();
   }
 }
 
@@ -532,6 +584,8 @@ function resetGame() {
   state.waitingForAnswer = false;
   state.transitioning = false;
   state.revealedMetrics.clear();
+  state.selections = [];
+  state.completion = null;
 }
 
 function replayGame() {

@@ -91,6 +91,26 @@ CREATE INDEX IF NOT EXISTS matchup_history_date_index
 ON matchup_history(challenge_date);
 """
 
+CREATE_PLAYER_TABLES = """
+CREATE TABLE IF NOT EXISTS players (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS player_results (
+    player_id TEXT NOT NULL,
+    challenge_id INTEGER NOT NULL,
+    score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 25),
+    completed_at TEXT NOT NULL,
+    PRIMARY KEY (player_id, challenge_id),
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenge_id) REFERENCES challenge_runs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS player_results_challenge_index
+ON player_results(challenge_id);
+"""
+
 UPSERT_ANIME = """
 INSERT INTO anime (
     mal_id,
@@ -172,6 +192,7 @@ def initialize_database(database_path=DATABASE_PATH):
         _migrate_anime_table(connection)
         connection.executescript(CREATE_INGESTION_TABLES)
         connection.executescript(CREATE_HISTORY_TABLES)
+        connection.executescript(CREATE_PLAYER_TABLES)
         connection.commit()
     finally:
         connection.close()
@@ -864,3 +885,109 @@ def record_challenge(
         connection.close()
 
     return challenge_id
+
+
+def ensure_player(player_id, database_path=DATABASE_PATH, created_at=None):
+    if created_at is None:
+        created_at = datetime.now(timezone.utc).isoformat()
+
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        cursor = connection.execute(
+            """
+            INSERT OR IGNORE INTO players (id, created_at)
+            VALUES (?, ?)
+            """,
+            (player_id, created_at),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return cursor.rowcount == 1
+
+
+def record_player_result(
+    player_id,
+    challenge_id,
+    score,
+    database_path=DATABASE_PATH,
+    completed_at=None,
+):
+    if (
+        not isinstance(score, int)
+        or isinstance(score, bool)
+        or not 0 <= score <= 25
+    ):
+        raise ValueError("score must be an integer between 0 and 25.")
+
+    if completed_at is None:
+        completed_at = datetime.now(timezone.utc).isoformat()
+
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        cursor = connection.execute(
+            """
+            INSERT OR IGNORE INTO player_results (
+                player_id,
+                challenge_id,
+                score,
+                completed_at
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (player_id, challenge_id, score, completed_at),
+        )
+        first_completion = cursor.rowcount == 1
+        official_result = connection.execute(
+            """
+            SELECT player_id, challenge_id, score, completed_at
+            FROM player_results
+            WHERE player_id = ? AND challenge_id = ?
+            """,
+            (player_id, challenge_id),
+        ).fetchone()
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    result = dict(official_result)
+    result["first_completion"] = first_completion
+    return result
+
+
+def load_player_results(player_id, database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                challenge_runs.challenge_date,
+                player_results.score,
+                player_results.completed_at
+            FROM player_results
+            JOIN challenge_runs
+                ON challenge_runs.id = player_results.challenge_id
+            WHERE player_results.player_id = ?
+            ORDER BY challenge_runs.challenge_date DESC
+            """,
+            (player_id,),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [dict(row) for row in rows]

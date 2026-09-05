@@ -52,6 +52,7 @@ CATEGORY_RULES = [
         "question": "Which movie has the longer runtime?",
     },
 ]
+TOTAL_QUESTIONS = len(CATEGORY_RULES) * (ANIME_PER_CATEGORY - 1)
 
 
 def get_comparison_value(anime, metric):
@@ -450,3 +451,53 @@ def evaluate_comparison(
             )
 
     raise ValueError(f"Unknown category: {category_name}")
+
+
+def verify_completed_answers(challenge, answers):
+    expected_comparisons = {
+        (category["name"], comparison_position)
+        for category in challenge
+        for comparison_position in range(1, len(category["anime"]))
+    }
+
+    if len(answers) != len(expected_comparisons):
+        raise ValueError(
+            f"A completed challenge must contain {len(expected_comparisons)} answers."
+        )
+
+    answered_comparisons = set()
+    verified_score = 0
+
+    for answer in answers:
+        try:
+            category_name = answer["category"]
+            comparison_position = answer["comparison_position"]
+            selected_mal_id = answer["selected_mal_id"]
+        except (KeyError, TypeError) as error:
+            raise ValueError(
+                "Every answer must identify one comparison and choice."
+            ) from error
+
+        comparison_key = (category_name, comparison_position)
+
+        if comparison_key not in expected_comparisons:
+            raise ValueError("The completion contains an unknown comparison.")
+
+        if comparison_key in answered_comparisons:
+            raise ValueError("Each comparison may appear only once in a completion.")
+
+        result = evaluate_comparison(
+            challenge,
+            category_name,
+            comparison_position,
+            selected_mal_id,
+        )
+        answered_comparisons.add(comparison_key)
+
+        if result["correct"]:
+            verified_score += 1
+
+    if answered_comparisons != expected_comparisons:
+        raise ValueError("The completion does not include every challenge comparison.")
+
+    return verified_score
