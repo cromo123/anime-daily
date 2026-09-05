@@ -17,6 +17,12 @@ const state = {
   revealedMetrics: new Map(),
   selections: [],
   completion: null,
+  challengeRequestDate: "today",
+  playingArchivedChallenge: false,
+  archiveYear: new Date().getFullYear(),
+  archiveMonth: new Date().getMonth() + 1,
+  archiveData: null,
+  selectedArchiveDate: null,
 };
 
 let introSequence = 0;
@@ -27,7 +33,12 @@ const elements = {
   roundIntro: document.querySelector("#round-intro"),
   gameScreen: document.querySelector("#game-screen"),
   resultsScreen: document.querySelector("#results-screen"),
+  archiveScreen: document.querySelector("#archive-screen"),
+  archiveResultScreen: document.querySelector("#archive-result-screen"),
   challengeDate: document.querySelector("#challenge-date"),
+  challengeLabel: document.querySelector("#challenge-label"),
+  todayNavButton: document.querySelector("#today-nav-button"),
+  archiveNavButton: document.querySelector("#archive-nav-button"),
   introRound: document.querySelector("#intro-round"),
   introTitle: document.querySelector("#intro-title"),
   introQuestion: document.querySelector("#intro-question"),
@@ -47,7 +58,20 @@ const elements = {
   finalScore: document.querySelector("#final-score"),
   finalPercentage: document.querySelector("#final-percentage"),
   resultsCopy: document.querySelector("#results-copy"),
+  resultsEyebrow: document.querySelector("#results-eyebrow"),
+  resultsTitle: document.querySelector("#results-title"),
   replayButton: document.querySelector("#replay-button"),
+  resultsArchiveButton: document.querySelector("#results-archive-button"),
+  archiveMonthTitle: document.querySelector("#archive-month-title"),
+  calendarGrid: document.querySelector("#calendar-grid"),
+  archiveError: document.querySelector("#archive-error"),
+  previousMonthButton: document.querySelector("#previous-month-button"),
+  nextMonthButton: document.querySelector("#next-month-button"),
+  archiveResultDate: document.querySelector("#archive-result-date"),
+  archiveResultScore: document.querySelector("#archive-result-score"),
+  archiveResultPercentage: document.querySelector("#archive-result-percentage"),
+  practiceButton: document.querySelector("#practice-button"),
+  archiveReturnButton: document.querySelector("#archive-return-button"),
 };
 
 function showScreen(screen) {
@@ -57,6 +81,8 @@ function showScreen(screen) {
     elements.roundIntro,
     elements.gameScreen,
     elements.resultsScreen,
+    elements.archiveScreen,
+    elements.archiveResultScreen,
   ]) {
     candidate.hidden = candidate !== screen;
   }
@@ -89,6 +115,22 @@ function formatNumber(value, maximumFractionDigits = 0) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
 }
 
+function localDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function setActiveNavigation(activeView) {
+  const todayIsActive = activeView === "today";
+  elements.todayNavButton.classList.toggle("is-active", todayIsActive);
+  elements.archiveNavButton.classList.toggle("is-active", !todayIsActive);
+  elements.todayNavButton.toggleAttribute("aria-current", todayIsActive);
+  elements.archiveNavButton.toggleAttribute("aria-current", !todayIsActive);
+}
+
 function validateChallenge(challenge) {
   return (
     challenge &&
@@ -113,12 +155,17 @@ async function readJsonResponse(response) {
   return data;
 }
 
-async function loadChallenge() {
+async function loadChallenge(challengeDate = "today") {
   introSequence += 1;
+  state.challengeRequestDate = challengeDate;
   showScreen(elements.loadingScreen);
 
   try {
-    const response = await fetch("/challenge/today", {
+    const challengePath =
+      challengeDate === "today"
+        ? "/challenge/today"
+        : `/challenge/${encodeURIComponent(challengeDate)}`;
+    const response = await fetch(challengePath, {
       headers: { Accept: "application/json" },
     });
     const challenge = await readJsonResponse(response);
@@ -128,8 +175,14 @@ async function loadChallenge() {
     }
 
     state.challenge = challenge;
+    state.playingArchivedChallenge =
+      challenge.challenge_date !== localDateString();
     resetGame();
     elements.challengeDate.textContent = formatDate(challenge.challenge_date);
+    elements.challengeLabel.textContent = state.playingArchivedChallenge
+      ? "Archive challenge"
+      : "Daily challenge";
+    setActiveNavigation(state.playingArchivedChallenge ? "archive" : "today");
     showRoundIntro();
   } catch (error) {
     elements.loadErrorMessage.textContent =
@@ -391,7 +444,8 @@ async function submitAnswer(selectedMalId) {
   elements.requestError.hidden = true;
 
   try {
-    const response = await fetch("/challenge/today/answer", {
+    const challengeDate = encodeURIComponent(state.challenge.challenge_date);
+    const response = await fetch(`/challenge/${challengeDate}/answer`, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -510,8 +564,19 @@ function showResults(completion) {
       `/ ${completion.total_questions}.`;
   } else {
     elements.resultsCopy.textContent =
-      "Your verified score is saved as today’s official result.";
+      "Your verified score is saved as this challenge’s official result.";
   }
+
+  elements.resultsEyebrow.textContent = state.playingArchivedChallenge
+    ? formatDate(state.challenge.challenge_date)
+    : "Daily challenge complete";
+  elements.resultsTitle.textContent = state.playingArchivedChallenge
+    ? "Archive challenge complete."
+    : "That’s today’s 25.";
+  elements.replayButton.textContent = state.playingArchivedChallenge
+    ? "Replay as practice"
+    : "Replay today’s challenge";
+  elements.resultsArchiveButton.hidden = !state.playingArchivedChallenge;
 
   state.completion = completion;
   state.transitioning = false;
@@ -548,6 +613,135 @@ async function submitCompletion() {
     elements.nextButton.disabled = false;
     state.transitioning = false;
   }
+}
+
+function archiveDateString(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+    2,
+    "0",
+  )}`;
+}
+
+function showArchivedResult(challenge) {
+  state.selectedArchiveDate = challenge.challenge_date;
+  elements.challengeLabel.textContent = "Archive challenge";
+  elements.challengeDate.textContent = formatDate(challenge.challenge_date);
+  elements.archiveResultDate.textContent = formatDate(challenge.challenge_date);
+  elements.archiveResultScore.textContent =
+    `${challenge.official_score} / ${challenge.total_questions}`;
+  elements.archiveResultPercentage.textContent =
+    `${formatNumber(challenge.percentage, 2)}% correct`;
+  setActiveNavigation("archive");
+  showScreen(elements.archiveResultScreen);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderArchiveCalendar(archive) {
+  const challengesByDate = new Map(
+    archive.challenges.map((challenge) => [challenge.challenge_date, challenge]),
+  );
+  const firstWeekday = new Date(archive.year, archive.month - 1, 1).getDay();
+  const cells = [];
+
+  elements.archiveMonthTitle.textContent = `${archive.month_name} ${archive.year}`;
+
+  for (let index = 0; index < firstWeekday; index += 1) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day is-empty";
+    emptyCell.setAttribute("aria-hidden", "true");
+    cells.push(emptyCell);
+  }
+
+  for (let day = 1; day <= archive.days_in_month; day += 1) {
+    const challengeDate = archiveDateString(archive.year, archive.month, day);
+    const challenge = challengesByDate.get(challengeDate);
+    const isFuture = challengeDate > archive.today;
+    const dayButton = document.createElement("button");
+    dayButton.className = "calendar-day";
+    dayButton.type = "button";
+    dayButton.disabled = !challenge || isFuture;
+
+    if (challengeDate === archive.today) {
+      dayButton.classList.add("is-today");
+    }
+
+    const dayNumber = document.createElement("strong");
+    dayNumber.textContent = String(day);
+    const dayStatus = document.createElement("span");
+
+    if (challenge && !isFuture) {
+      dayButton.classList.add("has-challenge");
+
+      if (challenge.completed) {
+        dayButton.classList.add("is-completed");
+        dayStatus.textContent = `${challenge.official_score}/${challenge.total_questions}`;
+        dayButton.setAttribute(
+          "aria-label",
+          `${formatDate(challengeDate)}, completed with ${dayStatus.textContent}`,
+        );
+        dayButton.addEventListener("click", () => showArchivedResult(challenge));
+      } else {
+        dayStatus.textContent = "Available";
+        dayButton.setAttribute(
+          "aria-label",
+          `${formatDate(challengeDate)}, challenge available`,
+        );
+        dayButton.addEventListener("click", () => loadChallenge(challengeDate));
+      }
+    } else {
+      dayStatus.textContent = isFuture ? "Future" : "—";
+    }
+
+    dayButton.append(dayNumber, dayStatus);
+    cells.push(dayButton);
+  }
+
+  elements.calendarGrid.replaceChildren(...cells);
+}
+
+async function loadArchive(year = state.archiveYear, month = state.archiveMonth) {
+  introSequence += 1;
+  state.archiveYear = year;
+  state.archiveMonth = month;
+  elements.archiveError.hidden = true;
+  elements.calendarGrid.replaceChildren();
+  elements.archiveMonthTitle.textContent = "Loading…";
+  elements.challengeLabel.textContent = "Challenge archive";
+  elements.challengeDate.textContent = new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+  setActiveNavigation("archive");
+  showScreen(elements.archiveScreen);
+
+  try {
+    const response = await fetch(`/archive?year=${year}&month=${month}`, {
+      headers: { Accept: "application/json" },
+    });
+    const archive = await readJsonResponse(response);
+    state.archiveData = archive;
+    renderArchiveCalendar(archive);
+  } catch (error) {
+    elements.archiveMonthTitle.textContent = "Archive unavailable";
+    elements.archiveError.textContent =
+      error.message || "The challenge archive could not be loaded.";
+    elements.archiveError.hidden = false;
+  }
+}
+
+function changeArchiveMonth(offset) {
+  let year = state.archiveYear;
+  let month = state.archiveMonth + offset;
+
+  if (month < 1) {
+    year -= 1;
+    month = 12;
+  } else if (month > 12) {
+    year += 1;
+    month = 1;
+  }
+
+  loadArchive(year, month);
 }
 
 async function advanceGame() {
@@ -595,7 +789,18 @@ function replayGame() {
 }
 
 elements.nextButton.addEventListener("click", advanceGame);
-elements.retryLoadButton.addEventListener("click", loadChallenge);
+elements.retryLoadButton.addEventListener("click", () =>
+  loadChallenge(state.challengeRequestDate),
+);
 elements.replayButton.addEventListener("click", replayGame);
+elements.todayNavButton.addEventListener("click", () => loadChallenge("today"));
+elements.archiveNavButton.addEventListener("click", () => loadArchive());
+elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
+elements.nextMonthButton.addEventListener("click", () => changeArchiveMonth(1));
+elements.practiceButton.addEventListener("click", () =>
+  loadChallenge(state.selectedArchiveDate),
+);
+elements.archiveReturnButton.addEventListener("click", () => loadArchive());
+elements.resultsArchiveButton.addEventListener("click", () => loadArchive());
 
 loadChallenge();

@@ -1,6 +1,7 @@
 import os
 import re
 import secrets
+from calendar import month_name, monthrange
 from datetime import date
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from database import (
     DATABASE_PATH,
     ensure_player,
     load_challenge_record,
+    load_month_archive,
     load_player_results,
     record_player_result,
 )
@@ -62,6 +64,7 @@ def request_uses_player_identity(path):
     return (
         path == "/"
         or path.startswith("/challenge/")
+        or path == "/archive"
         or path == "/player/history"
     )
 
@@ -106,34 +109,55 @@ def current_challenge_date():
     return date.today().isoformat()
 
 
-@app.get("/", include_in_schema=False)
-def frontend():
-    return FileResponse(STATIC_DIRECTORY / "index.html")
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-@app.get("/challenge/today")
-def get_today_challenge():
-    challenge_date = current_challenge_date()
+def parse_challenge_date(challenge_date):
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", challenge_date) is None:
+        raise HTTPException(
+            status_code=400,
+            detail="challenge date must use YYYY-MM-DD format.",
+        )
 
     try:
-        challenge = get_or_create_daily_challenge(
-            challenge_date,
-            app.state.database_path,
+        requested_date = date.fromisoformat(challenge_date)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="challenge date must use YYYY-MM-DD format.",
+        ) from error
+
+    if requested_date > date.today():
+        raise HTTPException(
+            status_code=400,
+            detail="Future challenges are not available.",
         )
+
+    return requested_date
+
+
+def load_challenge_for_api(requested_date):
+    challenge_date = requested_date.isoformat()
+
+    try:
+        if requested_date == date.today():
+            challenge = get_or_create_daily_challenge(
+                challenge_date,
+                app.state.database_path,
+            )
+        else:
+            challenge = load_stored_challenge(
+                challenge_date,
+                app.state.database_path,
+            )
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
-    return serialize_public_challenge(challenge_date, challenge)
+    if challenge is None:
+        raise HTTPException(status_code=404, detail="Challenge not found.")
+
+    return challenge
 
 
-@app.post("/challenge/today/answer")
-def answer_today_comparison(answer: AnswerRequest):
-    challenge_date = current_challenge_date()
+def evaluate_answer_for_date(requested_date, answer):
+    challenge_date = requested_date.isoformat()
 
     try:
         challenge = load_stored_challenge(
@@ -144,10 +168,7 @@ def answer_today_comparison(answer: AnswerRequest):
         raise HTTPException(status_code=500, detail=str(error)) from error
 
     if challenge is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Today's challenge has not been generated yet.",
-        )
+        raise HTTPException(status_code=404, detail="Challenge not found.")
 
     try:
         result = evaluate_comparison(
@@ -164,19 +185,48 @@ def answer_today_comparison(answer: AnswerRequest):
     return {"challenge_date": challenge_date, **result}
 
 
+@app.get("/", include_in_schema=False)
+def frontend():
+    return FileResponse(STATIC_DIRECTORY / "index.html")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/challenge/today")
+def get_today_challenge():
+    requested_date = date.today()
+    challenge = load_challenge_for_api(requested_date)
+    return serialize_public_challenge(requested_date, challenge)
+
+
+@app.get("/challenge/{challenge_date}")
+def get_dated_challenge(challenge_date: str):
+    requested_date = parse_challenge_date(challenge_date)
+    challenge = load_challenge_for_api(requested_date)
+    return serialize_public_challenge(requested_date, challenge)
+
+
+@app.post("/challenge/today/answer")
+def answer_today_comparison(answer: AnswerRequest):
+    return evaluate_answer_for_date(date.today(), answer)
+
+
+@app.post("/challenge/{challenge_date}/answer")
+def answer_dated_comparison(challenge_date: str, answer: AnswerRequest):
+    requested_date = parse_challenge_date(challenge_date)
+    return evaluate_answer_for_date(requested_date, answer)
+
+
 @app.post("/challenge/{challenge_date}/complete")
 def complete_challenge(
     challenge_date: str,
     completion: CompletionRequest,
     request: Request,
 ):
-    try:
-        normalized_date = date.fromisoformat(challenge_date).isoformat()
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail="challenge date must use YYYY-MM-DD format.",
-        ) from error
+    normalized_date = parse_challenge_date(challenge_date).isoformat()
 
     try:
         challenge = load_stored_challenge(
@@ -243,4 +293,48 @@ def player_history(request: Request):
             }
             for result in results
         ]
+    }
+
+
+@app.get("/archive")
+def archive_month(year: int, month: int, request: Request):
+    if year < 1 or year > 9999 or month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Invalid archive month.")
+
+    first_date = date(year, month, 1)
+
+    if year == 9999 and month == 12:
+        next_month_date = "9999-12-32"
+    elif month == 12:
+        next_month_date = date(year + 1, 1, 1)
+    else:
+        next_month_date = date(year, month + 1, 1)
+
+    archive_entries = load_month_archive(
+        request.state.player_id,
+        first_date,
+        next_month_date,
+        app.state.database_path,
+    )
+
+    return {
+        "year": year,
+        "month": month,
+        "month_name": month_name[month],
+        "days_in_month": monthrange(year, month)[1],
+        "today": current_challenge_date(),
+        "challenges": [
+            {
+                "challenge_date": entry["challenge_date"],
+                "completed": entry["official_score"] is not None,
+                "official_score": entry["official_score"],
+                "total_questions": TOTAL_QUESTIONS,
+                "percentage": (
+                    round(entry["official_score"] / TOTAL_QUESTIONS * 100, 2)
+                    if entry["official_score"] is not None
+                    else None
+                ),
+            }
+            for entry in archive_entries
+        ],
     }

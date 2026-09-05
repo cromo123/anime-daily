@@ -991,3 +991,36 @@ def load_player_results(player_id, database_path=DATABASE_PATH):
         connection.close()
 
     return [dict(row) for row in rows]
+
+
+def load_month_archive(
+    player_id,
+    first_date,
+    next_month_date,
+    database_path=DATABASE_PATH,
+):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                challenge_runs.challenge_date,
+                player_results.score AS official_score,
+                player_results.completed_at
+            FROM challenge_runs
+            LEFT JOIN player_results
+                ON player_results.challenge_id = challenge_runs.id
+                AND player_results.player_id = ?
+            WHERE challenge_runs.challenge_date >= ?
+                AND challenge_runs.challenge_date < ?
+            ORDER BY challenge_runs.challenge_date
+            """,
+            (player_id, str(first_date), str(next_month_date)),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [dict(row) for row in rows]

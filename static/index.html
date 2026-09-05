@@ -21,21 +21,32 @@
           <span>Anime Daily</span>
         </a>
 
-        <div class="daily-badge">
-          <span>Daily challenge</span>
-          <time id="challenge-date">Today</time>
+        <div class="topbar-actions">
+          <nav class="main-nav" aria-label="Primary navigation">
+            <button id="today-nav-button" class="nav-button is-active" type="button">
+              Today
+            </button>
+            <button id="archive-nav-button" class="nav-button" type="button">
+              Archive
+            </button>
+          </nav>
+
+          <div class="daily-badge">
+            <span id="challenge-label">Daily challenge</span>
+            <time id="challenge-date">Today</time>
+          </div>
         </div>
       </header>
 
       <section id="loading-screen" class="center-state" aria-live="polite">
         <span class="loader" aria-hidden="true"></span>
-        <h1>Preparing today’s matchups</h1>
+        <h1>Preparing the matchups</h1>
         <p>Loading five categories and 25 comparisons.</p>
       </section>
 
       <section id="error-screen" class="center-state" hidden>
         <span class="state-symbol" aria-hidden="true">!</span>
-        <h1>Today’s challenge couldn’t load</h1>
+        <h1>The challenge couldn’t load</h1>
         <p id="load-error-message">Check your connection and try again.</p>
         <button id="retry-load-button" class="primary-button" type="button">
           Try again
@@ -87,8 +98,8 @@
       </section>
 
       <section id="results-screen" class="results-screen" hidden>
-        <p class="eyebrow">Daily challenge complete</p>
-        <h1>That’s today’s 25.</h1>
+        <p id="results-eyebrow" class="eyebrow">Daily challenge complete</p>
+        <h1 id="results-title">That’s today’s 25.</h1>
         <div class="final-score-ring" aria-label="Final score">
           <strong id="final-score">0 / 25</strong>
           <span id="final-percentage">0% correct</span>
@@ -96,9 +107,63 @@
         <p id="results-copy" class="results-copy">
           Come back tomorrow for a new set, or replay today’s exact challenge.
         </p>
-        <button id="replay-button" class="primary-button" type="button">
-          Replay today’s challenge
-        </button>
+        <div class="result-actions">
+          <button id="replay-button" class="primary-button" type="button">
+            Replay today’s challenge
+          </button>
+          <button id="results-archive-button" class="secondary-button" type="button" hidden>
+            Return to archive
+          </button>
+        </div>
+      </section>
+
+      <section id="archive-screen" class="archive-screen" hidden>
+        <div class="archive-heading">
+          <div>
+            <p class="eyebrow">Challenge history</p>
+            <h1>Archive</h1>
+            <p>Play available days and revisit your official results.</p>
+          </div>
+          <div class="month-controls" aria-label="Calendar month controls">
+            <button id="previous-month-button" class="icon-button" type="button" aria-label="Previous month">←</button>
+            <h2 id="archive-month-title">September 2026</h2>
+            <button id="next-month-button" class="icon-button" type="button" aria-label="Next month">→</button>
+          </div>
+        </div>
+
+        <p id="archive-error" class="request-error" role="alert" hidden></p>
+        <div class="calendar-shell">
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+            <span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
+        </div>
+        <div class="calendar-legend" aria-label="Calendar legend">
+          <span><i class="legend-dot available"></i> Available</span>
+          <span><i class="legend-dot completed"></i> Completed</span>
+          <span><i class="legend-dot today"></i> Today</span>
+        </div>
+      </section>
+
+      <section id="archive-result-screen" class="results-screen" hidden>
+        <p class="eyebrow">Official result</p>
+        <h1 id="archive-result-date">September 1, 2026</h1>
+        <div class="final-score-ring" aria-label="Official score">
+          <strong id="archive-result-score">0 / 25</strong>
+          <span id="archive-result-percentage">0% correct</span>
+        </div>
+        <p class="results-copy">
+          This score is locked as your official result. Replays are practice only.
+        </p>
+        <div class="result-actions">
+          <button id="practice-button" class="primary-button" type="button">
+            Replay as practice
+          </button>
+          <button id="archive-return-button" class="secondary-button" type="button">
+            Return to archive
+          </button>
+        </div>
       </section>
 
       <noscript>
