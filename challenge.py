@@ -15,6 +15,7 @@ from database import (
 
 ANIME_PER_CATEGORY = 6
 MAX_GENERATION_ATTEMPTS = 500
+MAX_BATCH_ATTEMPTS_PER_CANDIDATE = 20
 RECENT_ANIME_DAYS = 7
 RECENT_MATCHUP_DAYS = 90
 DISPLAY_MEDIA_TYPES = {"tv", "movie", "ona", "ova", "special", "tv_special"}
@@ -420,6 +421,83 @@ def generate_history_aware_challenge(
         recent_anime_ids,
         recent_matchup_pairs,
     )
+
+
+def challenge_signature(challenge):
+    return tuple(
+        anime["mal_id"]
+        for category in challenge
+        for anime in category["anime"]
+    )
+
+
+def generate_challenge_candidates(
+    challenge_date,
+    count=20,
+    database_path=DATABASE_PATH,
+    random_source=None,
+):
+    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+        raise ValueError("count must be a positive integer.")
+
+    if random_source is None:
+        random_source = random
+
+    catalog = load_anime_records(database_path)
+    recent_anime_ids = load_recent_anime_ids(
+        challenge_date,
+        RECENT_ANIME_DAYS,
+        database_path,
+    )
+    recent_matchup_pairs = load_recent_matchup_pairs(
+        challenge_date,
+        RECENT_MATCHUP_DAYS,
+        database_path,
+    )
+
+    # Imported here because challenge_ratings uses the category rules above.
+    from challenge_ratings import build_rating_context, rate_challenge
+
+    rating_context = build_rating_context(catalog)
+    candidates = []
+    signatures = set()
+    attempts = 0
+    maximum_attempts = count * MAX_BATCH_ATTEMPTS_PER_CANDIDATE
+
+    while len(candidates) < count and attempts < maximum_attempts:
+        attempts += 1
+        challenge = generate_challenge(
+            catalog,
+            random_source,
+            recent_anime_ids,
+            recent_matchup_pairs,
+        )
+        signature = challenge_signature(challenge)
+
+        if signature in signatures:
+            continue
+
+        signatures.add(signature)
+        candidate_number = len(candidates) + 1
+        candidates.append(
+            {
+                "candidate_id": f"candidate_{candidate_number:02d}",
+                "challenge_date": str(challenge_date),
+                "categories": challenge,
+                "ratings": rate_challenge(
+                    challenge,
+                    rating_context=rating_context,
+                ),
+            }
+        )
+
+    if len(candidates) < count:
+        raise RuntimeError(
+            f"Could only generate {len(candidates)} unique challenge candidates "
+            f"after {maximum_attempts} attempts."
+        )
+
+    return candidates
 
 
 def get_or_create_daily_challenge(
