@@ -777,6 +777,40 @@ def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
     }
 
 
+def load_recent_challenge_dates(
+    target_challenge_date,
+    database_path=DATABASE_PATH,
+    count=7,
+):
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        raise ValueError("count must be a non-negative integer.")
+
+    if count == 0:
+        return []
+
+    target_challenge_date = _parse_challenge_date(
+        target_challenge_date
+    ).isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT challenge_date
+            FROM challenge_runs
+            WHERE challenge_date < ?
+            ORDER BY challenge_date DESC
+            LIMIT ?
+            """,
+            (target_challenge_date, count),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [row[0] for row in reversed(rows)]
+
+
 def load_recent_matchup_pairs(
     challenge_date,
     recent_days,
