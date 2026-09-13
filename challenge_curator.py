@@ -60,7 +60,7 @@ The ratings are all on a 0-100 scale:
 
 Do not calculate factual winners or factual values. Do not question whether the
 candidates are valid. Python already guarantees factual correctness, eligibility,
-tie prevention, uniqueness, runtime rules, and matchup validity.
+tie prevention, uniqueness, and matchup validity.
 
 Prefer a recognizable core, interesting surprises, varied eras and franchises,
 and engaging rather than uniformly trivial comparisons. Avoid excessive
@@ -87,7 +87,7 @@ def run_challenge_curator(
         role="Anime Daily Challenge Curator",
         goal="Choose the most entertaining candidate challenge for Anime Daily.",
         backstory=(
-            "Anime Daily is a More-or-Less style game with five categories and "
+            "Anime Daily is a More-or-Less style game with four categories and "
             "five chained comparisons per category. Most selected anime should "
             "be recognizable, with occasional obscure or surprising picks. A "
             "good daily challenge has variety across eras and franchises and is "

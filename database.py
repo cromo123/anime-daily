@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS players (
     created_at TEXT NOT NULL
 );
 
+-- Retain the historical 25-point ceiling for existing five-round results.
+-- New results are additionally checked against their stored matchup count.
 CREATE TABLE IF NOT EXISTS player_results (
     player_id TEXT NOT NULL,
     challenge_id INTEGER NOT NULL,
@@ -390,6 +392,137 @@ def load_mainline_neighbor_ids(anime_id, database_path=DATABASE_PATH):
         connection.close()
 
     return {row[0] for row in rows}
+
+
+def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
+    """Find a unique first entry for each stored prequel/sequel component.
+
+    None means the relationship graph is incomplete, cyclic, or has multiple
+    possible roots. In those cases the UI must not claim a season is the root.
+    """
+    anime_ids = list(dict.fromkeys(anime_ids))
+
+    if not anime_ids:
+        return {}
+
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    relation_types = tuple(sorted(MAINLINE_RELATION_TYPES))
+    relation_placeholders = ", ".join("?" for _ in relation_types)
+    anime_cache = {}
+    relation_cache = {}
+    resolved_roots = {}
+
+    def get_anime(anime_id):
+        if anime_id not in anime_cache:
+            anime_cache[anime_id] = connection.execute(
+                """
+                SELECT mal_id, title, image_url, relations_fetched
+                FROM anime
+                WHERE mal_id = ?
+                """,
+                (anime_id,),
+            ).fetchone()
+        return anime_cache[anime_id]
+
+    def get_mainline_relations(anime_id):
+        if anime_id not in relation_cache:
+            relation_cache[anime_id] = connection.execute(
+                f"""
+                SELECT source_mal_id, target_mal_id, relation_type
+                FROM anime_relations
+                WHERE relation_type IN ({relation_placeholders})
+                  AND (source_mal_id = ? OR target_mal_id = ?)
+                """,
+                (*relation_types, anime_id, anime_id),
+            ).fetchall()
+        return relation_cache[anime_id]
+
+    try:
+        for anime_id in anime_ids:
+            if anime_id in resolved_roots:
+                continue
+
+            to_visit = [anime_id]
+            component = set()
+            component_relations = set()
+            complete = True
+
+            while to_visit:
+                current_id = to_visit.pop()
+
+                if current_id in component:
+                    continue
+
+                component.add(current_id)
+                anime = get_anime(current_id)
+
+                if anime is None or not anime["relations_fetched"]:
+                    complete = False
+
+                for relation in get_mainline_relations(current_id):
+                    source_id = relation["source_mal_id"]
+                    target_id = relation["target_mal_id"]
+                    component_relations.add(
+                        (source_id, target_id, relation["relation_type"])
+                    )
+                    to_visit.append(source_id)
+                    to_visit.append(target_id)
+
+            root = None
+
+            if complete:
+                predecessors = {member_id: set() for member_id in component}
+                successors = {member_id: set() for member_id in component}
+
+                for source_id, target_id, relation_type in component_relations:
+                    if relation_type == "prequel":
+                        earlier_id, later_id = target_id, source_id
+                    else:
+                        earlier_id, later_id = source_id, target_id
+
+                    predecessors[later_id].add(earlier_id)
+                    successors[earlier_id].add(later_id)
+
+                first_entries = [
+                    member_id
+                    for member_id, earlier_ids in predecessors.items()
+                    if not earlier_ids
+                ]
+
+                if len(first_entries) == 1:
+                    remaining_predecessors = {
+                        member_id: len(earlier_ids)
+                        for member_id, earlier_ids in predecessors.items()
+                    }
+                    ready = first_entries[:]
+                    processed = 0
+
+                    while ready:
+                        current_id = ready.pop()
+                        processed += 1
+
+                        for later_id in successors[current_id]:
+                            remaining_predecessors[later_id] -= 1
+
+                            if remaining_predecessors[later_id] == 0:
+                                ready.append(later_id)
+
+                    if processed == len(component):
+                        first_anime = get_anime(first_entries[0])
+                        root = {
+                            "mal_id": first_anime["mal_id"],
+                            "title": first_anime["title"],
+                            "image_url": first_anime["image_url"],
+                        }
+
+            for member_id in component:
+                resolved_roots[member_id] = root
+    finally:
+        connection.close()
+
+    return {anime_id: resolved_roots[anime_id] for anime_id in anime_ids}
 
 
 def resolve_and_store_series_episode_count(
@@ -843,11 +976,11 @@ def record_challenge(
     database_path=DATABASE_PATH,
     created_at=None,
 ):
-    if len(challenge) != 5 or any(
+    if len(challenge) != 4 or any(
         len(category.get("anime", [])) != 6 for category in challenge
     ):
         raise ValueError(
-            "A complete challenge must contain five categories with six anime each."
+            "A complete challenge must contain four categories with six anime each."
         )
 
     challenge_date = _parse_challenge_date(challenge_date).isoformat()
@@ -956,9 +1089,9 @@ def record_player_result(
     if (
         not isinstance(score, int)
         or isinstance(score, bool)
-        or not 0 <= score <= 25
+        or score < 0
     ):
-        raise ValueError("score must be an integer between 0 and 25.")
+        raise ValueError("score must be a nonnegative integer.")
 
     if completed_at is None:
         completed_at = datetime.now(timezone.utc).isoformat()
@@ -968,6 +1101,13 @@ def record_player_result(
     connection.row_factory = sqlite3.Row
 
     try:
+        question_count = connection.execute(
+            "SELECT COUNT(*) FROM matchup_history WHERE challenge_id = ?",
+            (challenge_id,),
+        ).fetchone()[0]
+        if not 0 <= score <= question_count:
+            raise ValueError(f"score must be between 0 and {question_count}.")
+
         cursor = connection.execute(
             """
             INSERT OR IGNORE INTO player_results (
@@ -1012,7 +1152,9 @@ def load_player_results(player_id, database_path=DATABASE_PATH):
             SELECT
                 challenge_runs.challenge_date,
                 player_results.score,
-                player_results.completed_at
+                player_results.completed_at,
+                (SELECT COUNT(*) FROM matchup_history
+                 WHERE challenge_id = challenge_runs.id) AS total_questions
             FROM player_results
             JOIN challenge_runs
                 ON challenge_runs.id = player_results.challenge_id
@@ -1043,7 +1185,11 @@ def load_month_archive(
             SELECT
                 challenge_runs.challenge_date,
                 player_results.score AS official_score,
-                player_results.completed_at
+                player_results.completed_at,
+                (SELECT COUNT(*) FROM matchup_history
+                 WHERE challenge_id = challenge_runs.id) AS total_questions,
+                (SELECT COUNT(DISTINCT category) FROM challenge_anime
+                 WHERE challenge_id = challenge_runs.id) AS category_count
             FROM challenge_runs
             LEFT JOIN player_results
                 ON player_results.challenge_id = challenge_runs.id

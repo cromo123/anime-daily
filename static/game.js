@@ -1,9 +1,11 @@
-const TOTAL_ROUNDS = 5;
+const TOTAL_ROUNDS = 4;
 const COMPARISONS_PER_ROUND = 5;
 const TOTAL_COMPARISONS = TOTAL_ROUNDS * COMPARISONS_PER_ROUND;
 const INTRO_DURATION_MS = 1200;
 const CARD_TRANSITION_MS = 420;
 const CHALLENGER_ENTER_MS = 360;
+const PLAYTEST_MODE =
+  new URLSearchParams(window.location.search).get("playtest") === "1";
 
 const state = {
   challenge: null,
@@ -23,11 +25,13 @@ const state = {
   archiveMonth: new Date().getMonth() + 1,
   archiveData: null,
   selectedArchiveDate: null,
+  retryGeneratePlaytest: false,
 };
 
 let introSequence = 0;
 
 const elements = {
+  brand: document.querySelector(".brand"),
   loadingScreen: document.querySelector("#loading-screen"),
   errorScreen: document.querySelector("#error-screen"),
   roundIntro: document.querySelector("#round-intro"),
@@ -61,6 +65,7 @@ const elements = {
   resultsEyebrow: document.querySelector("#results-eyebrow"),
   resultsTitle: document.querySelector("#results-title"),
   replayButton: document.querySelector("#replay-button"),
+  newPlaytestButton: document.querySelector("#new-playtest-button"),
   resultsArchiveButton: document.querySelector("#results-archive-button"),
   archiveMonthTitle: document.querySelector("#archive-month-title"),
   calendarGrid: document.querySelector("#calendar-grid"),
@@ -70,6 +75,7 @@ const elements = {
   archiveResultDate: document.querySelector("#archive-result-date"),
   archiveResultScore: document.querySelector("#archive-result-score"),
   archiveResultPercentage: document.querySelector("#archive-result-percentage"),
+  archiveResultCopy: document.querySelector("#archive-result-copy"),
   practiceButton: document.querySelector("#practice-button"),
   archiveReturnButton: document.querySelector("#archive-return-button"),
 };
@@ -155,33 +161,63 @@ async function readJsonResponse(response) {
   return data;
 }
 
-async function loadChallenge(challengeDate = "today") {
+async function loadChallenge(challengeDate = "today", generateNewPlaytest = false) {
   introSequence += 1;
   state.challengeRequestDate = challengeDate;
+  state.retryGeneratePlaytest = generateNewPlaytest;
   showScreen(elements.loadingScreen);
 
   try {
-    const challengePath =
-      challengeDate === "today"
-        ? "/challenge/today"
-        : `/challenge/${encodeURIComponent(challengeDate)}`;
-    const response = await fetch(challengePath, {
-      headers: { Accept: "application/json" },
-    });
+    let response;
+    if (PLAYTEST_MODE) {
+      response = await fetch(
+        generateNewPlaytest ? "/dev/playtest/generate" : "/dev/playtest",
+        {
+          method: generateNewPlaytest ? "POST" : "GET",
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (response.status === 404 && !generateNewPlaytest) {
+        response = await fetch("/dev/playtest/generate", {
+          method: "POST",
+          headers: { Accept: "application/json" },
+        });
+      }
+      if (response.status === 404) {
+        throw new Error(
+          "Playtest mode is unavailable. Enable ANIME_DAILY_DEV_MODE=true on the server.",
+        );
+      }
+    } else {
+      const challengePath =
+        challengeDate === "today"
+          ? "/challenge/today"
+          : `/challenge/${encodeURIComponent(challengeDate)}`;
+      response = await fetch(challengePath, {
+        headers: { Accept: "application/json" },
+      });
+    }
     const challenge = await readJsonResponse(response);
 
-    if (!validateChallenge(challenge)) {
+    if (
+      !validateChallenge(challenge) ||
+      (PLAYTEST_MODE && !challenge.playtest_id)
+    ) {
       throw new Error("The daily challenge data is incomplete.");
     }
 
     state.challenge = challenge;
-    state.playingArchivedChallenge =
+    state.playingArchivedChallenge = !PLAYTEST_MODE &&
       challenge.challenge_date !== localDateString();
     resetGame();
     elements.challengeDate.textContent = formatDate(challenge.challenge_date);
-    elements.challengeLabel.textContent = state.playingArchivedChallenge
-      ? "Archive challenge"
-      : "Daily challenge";
+    if (PLAYTEST_MODE) {
+      elements.challengeLabel.textContent = "PLAYTEST";
+    } else {
+      elements.challengeLabel.textContent = state.playingArchivedChallenge
+        ? "Archive challenge"
+        : "Daily challenge";
+    }
     setActiveNavigation(state.playingArchivedChallenge ? "archive" : "today");
     showRoundIntro();
   } catch (error) {
@@ -284,10 +320,6 @@ function formatReveal(categoryName, revealedAnime) {
     return `Released: ${formatDate(revealedAnime.release_date)}`;
   }
 
-  if (categoryName === "Longer Runtime") {
-    return `Runtime: ${formatNumber(revealedAnime.runtime_minutes)} minutes`;
-  }
-
   return "";
 }
 
@@ -298,13 +330,11 @@ function addMetricReveal(cardCopy, revealedAnime) {
   cardCopy.append(metric);
 }
 
-function addCardVerdict(card, label, carried = false) {
-  const verdict = document.createElement("span");
-  verdict.className = carried
-    ? "card-verdict carry-verdict"
-    : "card-verdict";
-  verdict.textContent = label;
-  card.append(verdict);
+function addChoiceMarker(card) {
+  const marker = document.createElement("span");
+  marker.className = "card-verdict";
+  marker.textContent = "Your choice";
+  card.append(marker);
 }
 
 function createAnimeCard(anime, choiceNumber, entering = false) {
@@ -331,11 +361,13 @@ function createAnimeCard(anime, choiceNumber, entering = false) {
   title.className = "anime-title";
   title.textContent = anime.title;
 
-  const chooseLabel = document.createElement("p");
-  chooseLabel.className = "choose-label";
-  chooseLabel.textContent = "Choose this anime";
-
-  cardCopy.append(number, title, chooseLabel);
+  cardCopy.append(number, title);
+  if (currentRound().name === "More Episodes") {
+    const seriesLabel = document.createElement("p");
+    seriesLabel.className = "series-label";
+    seriesLabel.textContent = "Full anime series";
+    cardCopy.append(seriesLabel);
+  }
   card.append(createCover(anime), cardCopy);
 
   if (state.answer) {
@@ -347,22 +379,21 @@ function createAnimeCard(anime, choiceNumber, entering = false) {
 
     if (isCorrectAnime) {
       card.classList.add("is-correct");
-      addCardVerdict(card, "Correct");
     } else if (wasSelected) {
       card.classList.add("is-incorrect");
     } else {
       card.classList.add("is-dimmed");
     }
 
-    chooseLabel.textContent = wasSelected ? "Your choice" : "Other choice";
+    if (wasSelected) {
+      addChoiceMarker(card);
+    }
     addMetricReveal(cardCopy, revealedAnime);
   } else {
     const carriedReveal = revealedMetricFor(anime);
 
     if (carriedReveal) {
       card.classList.add("is-carried");
-      chooseLabel.textContent = "Carries forward";
-      addCardVerdict(card, "Carries forward", true);
       addMetricReveal(cardCopy, carriedReveal);
     }
 
@@ -396,7 +427,7 @@ function updateNextButton() {
   } else if (isLastComparison) {
     elements.nextButton.textContent = "Next round";
   } else {
-    elements.nextButton.textContent = "Next comparison";
+    elements.nextButton.textContent = "NEXT";
   }
 }
 
@@ -413,14 +444,14 @@ function renderComparison() {
   if (state.answer) {
     elements.nextButton.disabled = state.transitioning;
     elements.answerResult.textContent = state.answer.correct
-      ? "Correct choice"
-      : "Not quite";
+      ? "Good job!"
+      : "Not quite!";
     elements.answerResult.className = `answer-result ${
       state.answer.correct ? "correct" : "incorrect"
     }`;
     elements.answerDetail.textContent = state.answer.correct
-      ? "Your round score has been updated."
-      : "The correct anime is highlighted above.";
+      ? "you got it right."
+      : "You'll get it next time!";
     elements.answerMessage.hidden = false;
     updateNextButton();
   } else {
@@ -444,8 +475,10 @@ async function submitAnswer(selectedMalId) {
   elements.requestError.hidden = true;
 
   try {
-    const challengeDate = encodeURIComponent(state.challenge.challenge_date);
-    const response = await fetch(`/challenge/${challengeDate}/answer`, {
+    const answerPath = PLAYTEST_MODE
+      ? `/dev/playtest/${encodeURIComponent(state.challenge.playtest_id)}/answer`
+      : `/challenge/${encodeURIComponent(state.challenge.challenge_date)}/answer`;
+    const response = await fetch(answerPath, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -494,8 +527,6 @@ function prepareCarriedCard(card, anime) {
 
   card.querySelector(".card-verdict")?.remove();
   card.querySelector(".choice-number").textContent = "1";
-  card.querySelector(".choose-label").textContent = "Carries forward";
-  addCardVerdict(card, "Carries forward", true);
   card.addEventListener("click", () => submitAnswer(anime.mal_id));
 }
 
@@ -552,6 +583,25 @@ async function animateRoundExit() {
 }
 
 function showResults(completion) {
+  if (PLAYTEST_MODE) {
+    elements.finalScore.textContent = `${state.totalScore} / ${TOTAL_COMPARISONS}`;
+    elements.finalPercentage.textContent = `${formatNumber(
+      state.totalScore / TOTAL_COMPARISONS * 100,
+      2,
+    )}% correct`;
+    elements.resultsCopy.textContent =
+      "Practice only. This playtest does not change your daily results.";
+    elements.resultsEyebrow.textContent = "PLAYTEST COMPLETE";
+    elements.resultsTitle.textContent = "That’s all 20.";
+    elements.replayButton.textContent = "Replay this playtest";
+    elements.newPlaytestButton.hidden = false;
+    elements.resultsArchiveButton.hidden = true;
+    state.transitioning = false;
+    showScreen(elements.resultsScreen);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
   elements.finalScore.textContent = `${completion.verified_score} / ${completion.total_questions}`;
   elements.finalPercentage.textContent = `${formatNumber(
     completion.verified_percentage,
@@ -572,7 +622,7 @@ function showResults(completion) {
     : "Daily challenge complete";
   elements.resultsTitle.textContent = state.playingArchivedChallenge
     ? "Archive challenge complete."
-    : "That’s today’s 25.";
+    : "That’s today’s 20.";
   elements.replayButton.textContent = state.playingArchivedChallenge
     ? "Replay as practice"
     : "Replay today’s challenge";
@@ -631,6 +681,10 @@ function showArchivedResult(challenge) {
     `${challenge.official_score} / ${challenge.total_questions}`;
   elements.archiveResultPercentage.textContent =
     `${formatNumber(challenge.percentage, 2)}% correct`;
+  elements.practiceButton.hidden = !challenge.playable;
+  elements.archiveResultCopy.textContent = challenge.playable
+    ? "This score is locked as your official result. Replays are practice only."
+    : "This result belongs to an older five-round challenge. Its score is preserved, but this version cannot be replayed.";
   setActiveNavigation("archive");
   showScreen(elements.archiveResultScreen);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -659,7 +713,8 @@ function renderArchiveCalendar(archive) {
     const dayButton = document.createElement("button");
     dayButton.className = "calendar-day";
     dayButton.type = "button";
-    dayButton.disabled = !challenge || isFuture;
+    dayButton.disabled = !challenge || isFuture ||
+      (!challenge.playable && !challenge.completed);
 
     if (challengeDate === archive.today) {
       dayButton.classList.add("is-today");
@@ -680,6 +735,12 @@ function renderArchiveCalendar(archive) {
           `${formatDate(challengeDate)}, completed with ${dayStatus.textContent}`,
         );
         dayButton.addEventListener("click", () => showArchivedResult(challenge));
+      } else if (!challenge.playable) {
+        dayStatus.textContent = "Legacy";
+        dayButton.setAttribute(
+          "aria-label",
+          `${formatDate(challengeDate)}, older challenge not playable`,
+        );
       } else {
         dayStatus.textContent = "Available";
         dayButton.setAttribute(
@@ -765,7 +826,11 @@ async function advanceGame() {
     elements.answerMessage.hidden = true;
     showRoundIntro();
   } else {
-    await submitCompletion();
+    if (PLAYTEST_MODE) {
+      showResults();
+    } else {
+      await submitCompletion();
+    }
   }
 }
 
@@ -790,10 +855,15 @@ function replayGame() {
 
 elements.nextButton.addEventListener("click", advanceGame);
 elements.retryLoadButton.addEventListener("click", () =>
-  loadChallenge(state.challengeRequestDate),
+  loadChallenge(state.challengeRequestDate, state.retryGeneratePlaytest),
 );
 elements.replayButton.addEventListener("click", replayGame);
-elements.todayNavButton.addEventListener("click", () => loadChallenge("today"));
+elements.newPlaytestButton.addEventListener("click", () =>
+  loadChallenge("playtest", true),
+);
+elements.todayNavButton.addEventListener("click", () =>
+  loadChallenge(PLAYTEST_MODE ? "playtest" : "today"),
+);
 elements.archiveNavButton.addEventListener("click", () => loadArchive());
 elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
 elements.nextMonthButton.addEventListener("click", () => changeArchiveMonth(1));
@@ -803,4 +873,12 @@ elements.practiceButton.addEventListener("click", () =>
 elements.archiveReturnButton.addEventListener("click", () => loadArchive());
 elements.resultsArchiveButton.addEventListener("click", () => loadArchive());
 
-loadChallenge();
+if (PLAYTEST_MODE) {
+  elements.brand.href = "/?playtest=1";
+  elements.todayNavButton.textContent = "Playtest";
+  elements.archiveNavButton.hidden = true;
+  elements.challengeLabel.textContent = "PLAYTEST";
+  elements.challengeLabel.classList.add("is-playtest");
+}
+
+loadChallenge(PLAYTEST_MODE ? "playtest" : "today");

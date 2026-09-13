@@ -45,6 +45,7 @@ class AnimeDailyFlowState(BaseModel):
     stored_challenge: list[dict] | None = None
     challenge_id: int | None = None
     status: Literal["existing", "newly_generated"] | None = None
+    playtest: bool = False
 
 
 class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
@@ -63,10 +64,20 @@ class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
             suppress_flow_events=True,
         )
 
+    @classmethod
+    def for_playtest(cls, challenge_date=None):
+        """Run curation without loading or recording a daily challenge."""
+        flow = cls.for_date(challenge_date)
+        flow.state.playtest = True
+        return flow
+
     @start()
     def check_existing(self):
         if not self.state.challenge_date:
             self.state.challenge_date = date.today().isoformat()
+
+        if self.state.playtest:
+            return "challenge_checked"
 
         stored_challenge = load_stored_challenge(self.state.challenge_date)
         if stored_challenge is not None:
@@ -206,7 +217,18 @@ class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
         print(f"Selection validated: {selected_id}")
         return "selection_validated"
 
-    @listen(validate_selection)
+    @router(validate_selection, emit=["persist", "playtest"])
+    def route_selection(self, previous_result):
+        return "playtest" if self.state.playtest else "persist"
+
+    @listen("playtest")
+    def return_playtest(self):
+        if self.state.selected_candidate is None:
+            raise RuntimeError("The selected candidate is missing from Flow state.")
+        print("Playtest selected without persistence.")
+        return self.state.selected_candidate["categories"]
+
+    @listen("persist")
     def persist_selection(self, previous_result):
         selected_candidate = self.state.selected_candidate
         if selected_candidate is None:

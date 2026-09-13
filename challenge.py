@@ -8,6 +8,7 @@ from database import (
     load_challenge_record,
     load_recent_anime_ids,
     load_recent_matchup_pairs,
+    load_series_display_roots,
     normalize_matchup_pair,
     record_challenge,
 )
@@ -26,9 +27,6 @@ POPULAR_RANK_SECONDARY_MAX = 3000
 POPULARITY_PRIMARY_SLOT_OPTIONS = (4, 5, 5, 5, 5)
 POPULARITY_SECONDARY_SLOT_WEIGHT = 4
 POPULARITY_WILDCARD_SLOT_WEIGHT = 1
-RUNTIME_NORMAL_MINUTES = 40
-RUNTIME_SHORT_MINUTES = 20
-MAX_RUNTIME_SHORT_WILDCARDS = 1
 
 POPULARITY_PRIMARY = "primary"
 POPULARITY_SECONDARY = "secondary"
@@ -59,14 +57,12 @@ CATEGORY_RULES = [
         "metric_label": "Release date",
         "question": "Which anime is more recent?",
     },
-    {
-        "name": "Longer Runtime",
-        "metric": "runtime_minutes",
-        "metric_label": "Runtime in minutes",
-        "question": "Which movie has the longer runtime?",
-    },
 ]
 TOTAL_QUESTIONS = len(CATEGORY_RULES) * (ANIME_PER_CATEGORY - 1)
+
+
+class LegacyChallengeError(ValueError):
+    """A stored challenge uses an older category format and cannot be played."""
 
 
 def get_comparison_value(anime, metric):
@@ -86,9 +82,6 @@ def get_comparison_value(anime, metric):
 
 def has_eligible_display_type(anime, category):
     media_type = anime.get("type")
-
-    if category["name"] == "Longer Runtime":
-        return media_type == "movie"
 
     if category["name"] == "More Episodes":
         return media_type in EPISODIC_MEDIA_TYPES
@@ -140,12 +133,13 @@ def popularity_fallback_order(preferred_tier):
     return [POPULARITY_WILDCARD, POPULARITY_SECONDARY, POPULARITY_PRIMARY]
 
 
-def is_short_runtime(anime):
-    runtime = anime.get("runtime_minutes")
-    return runtime is not None and runtime < RUNTIME_NORMAL_MINUTES
-
-
-def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
+def is_eligible(
+    anime,
+    category,
+    used_anime_ids,
+    blocked_anime_ids,
+    series_displayable_ids=None,
+):
     mal_id = anime.get("mal_id")
 
     if (
@@ -158,14 +152,15 @@ def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
     if not has_eligible_display_type(anime, category):
         return False
 
-    if category["name"] == "More Popular" and anime.get("popularity_rank") is None:
+    if (
+        category["name"] == "More Episodes"
+        and series_displayable_ids is not None
+        and mal_id not in series_displayable_ids
+    ):
         return False
 
-    if category["name"] == "Longer Runtime":
-        runtime = anime.get("runtime_minutes")
-
-        if runtime is None or runtime < RUNTIME_SHORT_MINUTES:
-            return False
+    if category["name"] == "More Popular" and anime.get("popularity_rank") is None:
+        return False
 
     return get_comparison_value(anime, category["metric"]) is not None
 
@@ -173,22 +168,8 @@ def is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
 def choose_stratified_candidate(
     candidates,
     preferred_tier,
-    category,
-    short_runtime_count,
     random_source,
 ):
-    if category["name"] == "Longer Runtime":
-        normal_runtime_candidates = [
-            anime
-            for anime in candidates
-            if not is_short_runtime(anime)
-        ]
-
-        if normal_runtime_candidates:
-            candidates = normal_runtime_candidates
-        elif short_runtime_count >= MAX_RUNTIME_SHORT_WILDCARDS:
-            return None
-
     for popularity_tier in popularity_fallback_order(preferred_tier):
         tier_candidates = [
             anime
@@ -209,11 +190,18 @@ def select_category_anime(
     blocked_anime_ids,
     recent_matchup_pairs,
     random_source,
+    series_displayable_ids=None,
 ):
     candidates_by_id = {}
 
     for anime in catalog:
-        if is_eligible(anime, category, used_anime_ids, blocked_anime_ids):
+        if is_eligible(
+            anime,
+            category,
+            used_anime_ids,
+            blocked_anime_ids,
+            series_displayable_ids,
+        ):
             candidates_by_id[anime["mal_id"]] = anime
 
     available_candidates = list(candidates_by_id.values())
@@ -221,7 +209,6 @@ def select_category_anime(
     selected_anime = []
     previous_value = None
     previous_anime = None
-    short_runtime_count = 0
     popularity_plan = build_popularity_plan(random_source)
 
     while len(selected_anime) < ANIME_PER_CATEGORY:
@@ -247,8 +234,6 @@ def select_category_anime(
         chosen_anime = choose_stratified_candidate(
             valid_next_candidates,
             popularity_plan[len(selected_anime)],
-            category,
-            short_runtime_count,
             random_source,
         )
 
@@ -258,9 +243,6 @@ def select_category_anime(
         selected_value = get_comparison_value(chosen_anime, category["metric"])
         available_candidates.remove(chosen_anime)
         selected_anime.append(chosen_anime)
-
-        if category["name"] == "Longer Runtime" and is_short_runtime(chosen_anime):
-            short_runtime_count += 1
 
         previous_value = selected_value
         previous_anime = chosen_anime
@@ -273,15 +255,13 @@ def try_generate_challenge(
     blocked_anime_ids,
     recent_matchup_pairs,
     random_source,
+    series_displayable_ids=None,
 ):
-    runtime_category = CATEGORY_RULES[-1]
-    selection_order = [runtime_category] + CATEGORY_RULES[:-1]
-
     for _ in range(MAX_GENERATION_ATTEMPTS):
         used_anime_ids = set()
         selected_by_category = {}
 
-        for category in selection_order:
+        for category in CATEGORY_RULES:
             selected_anime = select_category_anime(
                 catalog,
                 category,
@@ -289,6 +269,7 @@ def try_generate_challenge(
                 blocked_anime_ids,
                 recent_matchup_pairs,
                 random_source,
+                series_displayable_ids,
             )
 
             if selected_anime is None:
@@ -315,6 +296,7 @@ def generate_challenge(
     random_source=None,
     recent_anime_ids=None,
     recent_matchup_pairs=None,
+    series_displayable_ids=None,
 ):
     if random_source is None:
         random_source = random
@@ -331,8 +313,8 @@ def generate_challenge(
 
     if len(unique_anime_ids) < ANIME_PER_CATEGORY * len(CATEGORY_RULES):
         raise RuntimeError(
-            "The catalog needs at least 30 unique MAL entries to build a complete "
-            "challenge."
+            f"The catalog needs at least {ANIME_PER_CATEGORY * len(CATEGORY_RULES)} "
+            "unique MAL entries to build a complete challenge."
         )
 
     challenge = try_generate_challenge(
@@ -340,6 +322,7 @@ def generate_challenge(
         recent_anime_ids,
         recent_matchup_pairs,
         random_source,
+        series_displayable_ids,
     )
 
     if challenge is not None:
@@ -350,6 +333,7 @@ def generate_challenge(
         set(),
         recent_matchup_pairs,
         random_source,
+        series_displayable_ids,
     )
 
     if challenge is not None:
@@ -357,8 +341,9 @@ def generate_challenge(
 
     raise RuntimeError(
         "The catalog could not produce a complete valid challenge, even after "
-        "relaxing recent-anime avoidance. Factual validity, movie-only runtime, "
-        "unique MAL IDs, and recent exact-matchup prevention remain required."
+        "relaxing recent-anime avoidance. Factual validity, verified More "
+        "Episodes display roots, unique MAL IDs, and "
+        "recent exact-matchup prevention remain required."
     )
 
 
@@ -372,6 +357,14 @@ def challenge_from_record(challenge_record):
         del anime["category"]
         del anime["position"]
         placements_by_category.setdefault(category_name, []).append((position, anime))
+
+    expected_categories = {category["name"] for category in CATEGORY_RULES}
+    if set(placements_by_category) != expected_categories:
+        raise LegacyChallengeError(
+            "This stored challenge uses an older category format and cannot be "
+            "played in the current four-round game. Its official result remains "
+            "available in the archive."
+        )
 
     challenge = []
 
@@ -398,12 +391,29 @@ def load_stored_challenge(challenge_date, database_path=DATABASE_PATH):
     return challenge_from_record(challenge_record)
 
 
+def load_series_displayable_ids(catalog, database_path):
+    """Keep only episodic entries with a verified root for display."""
+    episodic_ids = [
+        anime["mal_id"]
+        for anime in catalog
+        if anime.get("type") in EPISODIC_MEDIA_TYPES
+        and anime.get("series_episodes") is not None
+    ]
+    roots = load_series_display_roots(episodic_ids, database_path)
+    return {
+        anime_id
+        for anime_id, root in roots.items()
+        if root is not None
+    }
+
+
 def generate_history_aware_challenge(
     challenge_date,
     database_path=DATABASE_PATH,
     random_source=None,
 ):
     catalog = load_anime_records(database_path)
+    series_displayable_ids = load_series_displayable_ids(catalog, database_path)
     recent_anime_ids = load_recent_anime_ids(
         challenge_date,
         RECENT_ANIME_DAYS,
@@ -420,6 +430,7 @@ def generate_history_aware_challenge(
         random_source,
         recent_anime_ids,
         recent_matchup_pairs,
+        series_displayable_ids,
     )
 
 
@@ -444,6 +455,7 @@ def generate_challenge_candidates(
         random_source = random
 
     catalog = load_anime_records(database_path)
+    series_displayable_ids = load_series_displayable_ids(catalog, database_path)
     recent_anime_ids = load_recent_anime_ids(
         challenge_date,
         RECENT_ANIME_DAYS,
@@ -471,6 +483,7 @@ def generate_challenge_candidates(
             random_source,
             recent_anime_ids,
             recent_matchup_pairs,
+            series_displayable_ids,
         )
         signature = challenge_signature(challenge)
 
@@ -529,20 +542,44 @@ def get_or_create_daily_challenge(
     return challenge
 
 
-def serialize_public_challenge(challenge_date, challenge):
+def serialize_public_challenge(
+    challenge_date,
+    challenge,
+    database_path=DATABASE_PATH,
+):
     categories = []
+    series_anime_ids = [
+        anime["mal_id"]
+        for category in challenge
+        if category["name"] == "More Episodes"
+        for anime in category["anime"]
+    ]
+    series_roots = load_series_display_roots(
+        series_anime_ids,
+        database_path,
+    )
 
     for category in challenge:
-        public_anime = [
-            {
-                "position": position,
-                "mal_id": anime["mal_id"],
-                "title": anime["title"],
-                "type": anime["type"],
-                "image_url": anime.get("image_url"),
-            }
-            for position, anime in enumerate(category["anime"], start=1)
-        ]
+        public_anime = []
+
+        for position, anime in enumerate(category["anime"], start=1):
+            title = anime["title"]
+            image_url = anime.get("image_url")
+
+            if category["name"] == "More Episodes":
+                root = series_roots[anime["mal_id"]]
+                title = root["title"] if root else "Series root unavailable"
+                image_url = root["image_url"] if root else None
+
+            public_anime.append(
+                {
+                    "position": position,
+                    "mal_id": anime["mal_id"],
+                    "title": title,
+                    "type": anime["type"],
+                    "image_url": image_url,
+                }
+            )
         categories.append(
             {
                 "name": category["name"],

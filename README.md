@@ -11,7 +11,7 @@ Anime Daily is in early development. Its gameplay, data pipeline, and supporting
 ## Planned Features
 
 - One shared anime comparison challenge each day
-- Five comparison categories with a total daily score out of 25
+- Four comparison categories with a total daily score out of 20
 - Automatically generated matchups from structured anime data
 - AI-assisted matchup curation and quality review
 - Deterministic validation of factual game answers
@@ -25,17 +25,16 @@ Every category except More Episodes will compare the specific MAL entry or seaso
 - **More Popular:** Compare the member or list-user count of each specific entry, then reveal both that count and its MAL popularity rank.
 - **More Episodes:** Compare the calculated episode total of each connected mainline series. This is the only category that uses whole-series aggregation.
 - **More Recent:** Compare the start or release date of each specific entry.
-- **Longer Runtime:** Compare the runtime of each specific movie entry. Normal TV episode runtimes are not used.
 
 Each category will use a different ordered list of six anime. Players will make five chained comparisons: anime 1 vs anime 2, anime 2 vs anime 3, and so on through anime 5 vs anime 6. After every choice, the relevant metric for both anime will be revealed whether the answer was correct or not.
 
-After five comparisons, the game will move to the next category with a different anime list. Five categories with five comparisons each will produce a total daily score out of 25.
+After five comparisons, the game will move to the next category with a different anime list. Four categories with five comparisons each produce a total daily score out of 20.
 
 ## Data and Catalog Strategy
 
 The official MyAnimeList API will be the authoritative external source for anime facts. The finished application will synchronize that data into its own local catalog and database, so gameplay and daily challenge generation will not depend on live MAL requests.
 
-The catalog is intended to cover tens of thousands of popular anime, with especially strong movie coverage for Longer Runtime. MAL data will be refreshed periodically rather than treated as permanently static.
+The catalog is intended to cover tens of thousands of popular anime. MAL data will be refreshed periodically rather than treated as permanently static.
 
 ## Series Episode Totals
 

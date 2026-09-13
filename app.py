@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from challenge import (
+    CATEGORY_RULES,
+    LegacyChallengeError,
     TOTAL_QUESTIONS,
     evaluate_comparison,
     get_or_create_daily_challenge,
@@ -37,10 +39,16 @@ PLAYER_COOKIE_SECURE = os.getenv("ANIME_DAILY_COOKIE_SECURE", "").lower() in {
     "true",
     "yes",
 }
+DEV_MODE = os.getenv("ANIME_DAILY_DEV_MODE", "").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 app = FastAPI(title="Anime Daily")
 app.state.database_path = DATABASE_PATH
 app.state.player_cookie_secure = PLAYER_COOKIE_SECURE
+app.state.playtest = None
 app.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")
 
 
@@ -78,6 +86,9 @@ def valid_player_id(player_id):
 
 @app.middleware("http")
 async def anonymous_player_identity(request: Request, call_next):
+    if request.url.path == "/" and request.query_params.get("playtest") == "1":
+        return await call_next(request)
+
     if not request_uses_player_identity(request.url.path):
         return await call_next(request)
 
@@ -147,6 +158,8 @@ def load_challenge_for_api(requested_date):
                 challenge_date,
                 app.state.database_path,
             )
+    except LegacyChallengeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
@@ -164,6 +177,8 @@ def evaluate_answer_for_date(requested_date, answer):
             challenge_date,
             app.state.database_path,
         )
+    except LegacyChallengeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
@@ -199,14 +214,22 @@ def health():
 def get_today_challenge():
     requested_date = date.today()
     challenge = load_challenge_for_api(requested_date)
-    return serialize_public_challenge(requested_date, challenge)
+    return serialize_public_challenge(
+        requested_date,
+        challenge,
+        app.state.database_path,
+    )
 
 
 @app.get("/challenge/{challenge_date}")
 def get_dated_challenge(challenge_date: str):
     requested_date = parse_challenge_date(challenge_date)
     challenge = load_challenge_for_api(requested_date)
-    return serialize_public_challenge(requested_date, challenge)
+    return serialize_public_challenge(
+        requested_date,
+        challenge,
+        app.state.database_path,
+    )
 
 
 @app.post("/challenge/today/answer")
@@ -237,6 +260,8 @@ def complete_challenge(
             normalized_date,
             app.state.database_path,
         )
+    except LegacyChallengeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except (RuntimeError, ValueError) as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
@@ -287,8 +312,10 @@ def player_history(request: Request):
             {
                 "challenge_date": result["challenge_date"],
                 "official_score": result["score"],
-                "total_questions": TOTAL_QUESTIONS,
-                "percentage": round(result["score"] / TOTAL_QUESTIONS * 100, 2),
+                "total_questions": result["total_questions"],
+                "percentage": round(
+                    result["score"] / result["total_questions"] * 100, 2
+                ),
                 "completed_at": result["completed_at"],
             }
             for result in results
@@ -328,9 +355,16 @@ def archive_month(year: int, month: int, request: Request):
                 "challenge_date": entry["challenge_date"],
                 "completed": entry["official_score"] is not None,
                 "official_score": entry["official_score"],
-                "total_questions": TOTAL_QUESTIONS,
+                "total_questions": entry["total_questions"],
+                "playable": (
+                    entry["total_questions"] == TOTAL_QUESTIONS
+                    and entry["category_count"] == len(CATEGORY_RULES)
+                ),
                 "percentage": (
-                    round(entry["official_score"] / TOTAL_QUESTIONS * 100, 2)
+                    round(
+                        entry["official_score"] / entry["total_questions"] * 100,
+                        2,
+                    )
                     if entry["official_score"] is not None
                     else None
                 ),
@@ -338,3 +372,76 @@ def archive_month(year: int, month: int, request: Request):
             for entry in archive_entries
         ],
     }
+
+
+if DEV_MODE:
+    def current_playtest(playtest_id=None):
+        playtest = app.state.playtest
+        if playtest is None or (
+            playtest_id is not None and playtest["id"] != playtest_id
+        ):
+            raise HTTPException(status_code=404, detail="Playtest not found.")
+        return playtest
+
+
+    def public_playtest(playtest):
+        return {
+            **serialize_public_challenge(
+                playtest["challenge_date"],
+                playtest["challenge"],
+                app.state.database_path,
+            ),
+            "playtest_id": playtest["id"],
+        }
+
+
+    @app.post("/dev/playtest/generate")
+    def generate_playtest():
+        from daily_challenge_flow import DailyChallengeFlow
+
+        previous = app.state.playtest
+        for _ in range(3):
+            flow = DailyChallengeFlow.for_playtest()
+            challenge = flow.kickoff()
+            if challenge != flow.state.selected_candidate["categories"]:
+                raise RuntimeError(
+                    "Playtest Flow did not return its selected challenge."
+                )
+            if previous is None or challenge != previous["challenge"]:
+                break
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="Could not generate a different playtest challenge.",
+            )
+
+        playtest = {
+            "id": secrets.token_urlsafe(16),
+            "challenge_date": flow.state.challenge_date,
+            "challenge": challenge,
+        }
+        app.state.playtest = playtest
+        return public_playtest(playtest)
+
+
+    @app.get("/dev/playtest")
+    def get_playtest():
+        return public_playtest(current_playtest())
+
+
+    @app.post("/dev/playtest/{playtest_id}/answer")
+    def answer_playtest(playtest_id: str, answer: AnswerRequest):
+        playtest = current_playtest(playtest_id)
+        try:
+            result = evaluate_comparison(
+                playtest["challenge"],
+                answer.category,
+                answer.comparison_position,
+                answer.selected_mal_id,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except RuntimeError as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        return {"playtest_id": playtest_id, **result}

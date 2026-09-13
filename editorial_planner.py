@@ -47,13 +47,13 @@ target_modernity:
 
 wildcard_target:
 Number from 0 to 3 representing approximately how many genuinely obscure
-surprise entries should appear across the full 30-anime challenge.
+surprise entries should appear across the full 24-anime challenge.
 
 notes:
 A few short editorial directions for the downstream generator and curator.
 
 These are SOFT TARGETS, not factual rules.
-Python remains responsible for eligibility, validity, uniqueness, runtime rules,
+Python remains responsible for eligibility, validity, uniqueness,
 history avoidance, and factual correctness.
 
 Do not choose individual anime.
@@ -73,10 +73,10 @@ def run_editorial_planner(
         role="Anime Daily Editor",
         goal="Plan varied and entertaining daily challenges over time.",
         backstory=(
-            "Anime Daily is a More-or-Less style anime game with five "
+            "Anime Daily is a More-or-Less style anime game with four "
             "categories: Higher MAL Score, More Popular, More Episodes, More "
-            "Recent, and Longer Runtime. Each daily challenge contains 30 anime "
-            "across 25 comparisons. Most anime should be recognizable, with "
+            "Recent. Each daily challenge contains 24 anime "
+            "across 20 comparisons. Most anime should be recognizable, with "
             "occasional obscure surprises. You do not choose individual anime "
             "and you do not determine factual answers. Your job at this stage is "
             "to decide what editorial character the next daily challenge should "

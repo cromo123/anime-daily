@@ -1,6 +1,10 @@
 from datetime import date
 
-from challenge import evaluate_category_comparison, get_or_create_daily_challenge
+from challenge import (
+    TOTAL_QUESTIONS,
+    evaluate_category_comparison,
+    get_or_create_daily_challenge,
+)
 
 
 def play_comparison_round(anime_a, anime_b, category, comparison_position):
@@ -81,7 +85,7 @@ def main():
     for category in challenge:
         total_score = play_category(category, total_score)
 
-    print(f"\nFinal score: {total_score} / 25")
+    print(f"\nFinal score: {total_score} / {TOTAL_QUESTIONS}")
 
 
 if __name__ == "__main__":

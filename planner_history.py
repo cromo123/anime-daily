@@ -1,4 +1,5 @@
 from challenge import (
+    LegacyChallengeError,
     POPULAR_RANK_PRIMARY_MAX,
     POPULAR_RANK_SECONDARY_MAX,
     load_stored_challenge,
@@ -54,7 +55,11 @@ def load_recent_challenge_history(
     history = []
 
     for challenge_date in challenge_dates:
-        challenge = load_stored_challenge(challenge_date, database_path)
+        try:
+            challenge = load_stored_challenge(challenge_date, database_path)
+        except LegacyChallengeError:
+            # Old five-round records cannot be rated as a four-round challenge.
+            continue
 
         if challenge is None:
             continue

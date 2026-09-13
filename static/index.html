@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Anime Daily — five categories, twenty-five daily anime comparisons."
+      content="Anime Daily — four categories, twenty daily anime comparisons."
     >
     <title>Anime Daily</title>
     <link rel="stylesheet" href="/static/styles.css">
@@ -41,7 +41,7 @@
       <section id="loading-screen" class="center-state" aria-live="polite">
         <span class="loader" aria-hidden="true"></span>
         <h1>Preparing the matchups</h1>
-        <p>Loading five categories and 25 comparisons.</p>
+        <p>Loading four categories and 20 comparisons.</p>
       </section>
 
       <section id="error-screen" class="center-state" hidden>
@@ -54,7 +54,7 @@
       </section>
 
       <section id="round-intro" class="round-intro" aria-live="polite" hidden>
-        <p id="intro-round" class="intro-round">Round 1 / 5</p>
+        <p id="intro-round" class="intro-round">Round 1 / 4</p>
         <h1 id="intro-title">Higher Score</h1>
         <p id="intro-question">Which anime has the higher score?</p>
         <span class="intro-line" aria-hidden="true"></span>
@@ -63,7 +63,7 @@
       <section id="game-screen" class="game-screen" hidden>
         <div class="game-status">
           <div class="category-heading">
-            <p id="category-count" class="eyebrow">Round 1 / 5</p>
+            <p id="category-count" class="eyebrow">Round 1 / 4</p>
             <h1 id="category-name">Higher Score</h1>
             <p id="category-question" class="question">
               Which anime has the higher score?
@@ -90,18 +90,22 @@
             <p id="answer-detail" class="answer-detail"></p>
           </div>
           <button id="next-button" class="primary-button next-button" type="button">
-            Next comparison
+            NEXT
           </button>
         </div>
 
         <p id="request-error" class="request-error" role="alert" hidden></p>
+
+        <aside class="promo-slot" aria-label="Future promotional space">
+          <span>PROMO</span>
+        </aside>
       </section>
 
       <section id="results-screen" class="results-screen" hidden>
         <p id="results-eyebrow" class="eyebrow">Daily challenge complete</p>
-        <h1 id="results-title">That’s today’s 25.</h1>
+        <h1 id="results-title">That’s today’s 20.</h1>
         <div class="final-score-ring" aria-label="Final score">
-          <strong id="final-score">0 / 25</strong>
+          <strong id="final-score">0 / 20</strong>
           <span id="final-percentage">0% correct</span>
         </div>
         <p id="results-copy" class="results-copy">
@@ -110,6 +114,9 @@
         <div class="result-actions">
           <button id="replay-button" class="primary-button" type="button">
             Replay today’s challenge
+          </button>
+          <button id="new-playtest-button" class="secondary-button" type="button" hidden>
+            Generate New Playtest
           </button>
           <button id="results-archive-button" class="secondary-button" type="button" hidden>
             Return to archive
@@ -150,10 +157,10 @@
         <p class="eyebrow">Official result</p>
         <h1 id="archive-result-date">September 1, 2026</h1>
         <div class="final-score-ring" aria-label="Official score">
-          <strong id="archive-result-score">0 / 25</strong>
+          <strong id="archive-result-score">0 / 20</strong>
           <span id="archive-result-percentage">0% correct</span>
         </div>
-        <p class="results-copy">
+        <p id="archive-result-copy" class="results-copy">
           This score is locked as your official result. Replays are practice only.
         </p>
         <div class="result-actions">

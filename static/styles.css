@@ -150,6 +150,11 @@ button {
   font-weight: 750;
 }
 
+.daily-badge span.is-playtest {
+  color: var(--yellow);
+  letter-spacing: 0.08em;
+}
+
 .daily-badge span::before {
   display: inline-block;
   width: 0.45rem;
@@ -448,7 +453,7 @@ button {
   letter-spacing: -0.035em;
 }
 
-.choose-label {
+.series-label {
   margin: 1rem 0 0;
   color: var(--red);
   font-size: 0.78rem;
@@ -473,18 +478,13 @@ button {
   right: 0.8rem;
   z-index: 2;
   padding: 0.45rem 0.65rem;
-  color: #06130d;
-  background: var(--success);
+  color: var(--bg);
+  background: var(--text);
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.card-verdict.carry-verdict {
-  color: #041412;
-  background: var(--cyan);
 }
 
 .answer-message {
@@ -579,6 +579,30 @@ button {
   border: 1px solid rgba(255, 113, 133, 0.45);
   border-radius: 0.8rem;
   text-align: center;
+}
+
+.promo-slot {
+  display: none;
+}
+
+@media (min-width: 1400px) and (min-height: 650px) {
+  .promo-slot {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    display: grid;
+    width: 10rem;
+    min-height: 7rem;
+    place-items: center;
+    color: var(--muted);
+    background: rgba(17, 22, 37, 0.72);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-medium);
+    font-size: 0.7rem;
+    font-weight: 850;
+    letter-spacing: 0.18em;
+    pointer-events: none;
+  }
 }
 
 .center-state,
@@ -740,6 +764,11 @@ button {
 
 .calendar-day.has-challenge:hover {
   background: rgba(255, 77, 103, 0.16);
+}
+
+.calendar-day.has-challenge:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .calendar-day.is-completed {

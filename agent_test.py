@@ -43,8 +43,8 @@ curator = Agent(
     role="Anime Daily Challenge Curator",
     goal="Choose the most entertaining candidate challenge for Anime Daily.",
     backstory=(
-        "Anime Daily is a More-or-Less style game with five categories: "
-        "Higher MAL Score, More Popular, More Episodes, More Recent, and Longer Runtime. "
+        "Anime Daily is a More-or-Less style game with four categories: "
+        "Higher MAL Score, More Popular, More Episodes, and More Recent. "
         "Each category contains six anime forming five chained comparisons. "
         "Most selected anime should be recognizable and popular, but occasional obscure "
         "or surprising picks are desirable. A good daily challenge should have variety "
