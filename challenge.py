@@ -27,10 +27,24 @@ POPULAR_RANK_SECONDARY_MAX = 3000
 POPULARITY_PRIMARY_SLOT_OPTIONS = (4, 5, 5, 5, 5)
 POPULARITY_SECONDARY_SLOT_WEIGHT = 4
 POPULARITY_WILDCARD_SLOT_WEIGHT = 1
-
 POPULARITY_PRIMARY = "primary"
 POPULARITY_SECONDARY = "secondary"
 POPULARITY_WILDCARD = "wildcard"
+
+OPENING_ORDER_TRIALS = 24
+# Difficulty is a 0-100 percentile-based score; 45 is clear, not trivial.
+OPENING_TARGET_DIFFICULTY = 45
+OPENING_DIFFICULTY_WEIGHT = 1.5
+OPENING_RELATIVE_DIFFICULTY_WEIGHT = 1.5
+# Secondary entries are acceptable; wildcard/unknown openings need a much
+# stronger difficulty benefit to be considered.
+OPENING_TIER_PENALTIES = {
+    POPULARITY_PRIMARY: 0,
+    POPULARITY_SECONDARY: 18,
+    POPULARITY_WILDCARD: 110,
+    "unknown": 130,
+}
+OPENING_NEAR_BEST_MARGIN = 4
 
 CATEGORY_RULES = [
     {
@@ -183,6 +197,97 @@ def choose_stratified_candidate(
     return None
 
 
+def opening_popularity_tier(anime, category_name, series_root_popularity_ranks):
+    if category_name == "More Episodes" and series_root_popularity_ranks is not None:
+        rank = series_root_popularity_ranks.get(anime["mal_id"])
+    else:
+        rank = anime.get("popularity_rank")
+
+    if rank is None:
+        return "unknown"
+    if rank <= POPULAR_RANK_PRIMARY_MAX:
+        return POPULARITY_PRIMARY
+    if rank <= POPULAR_RANK_SECONDARY_MAX:
+        return POPULARITY_SECONDARY
+    return POPULARITY_WILDCARD
+
+
+def has_valid_adjacent_matchups(anime_order, metric, recent_matchup_pairs):
+    for anime_a, anime_b in zip(anime_order, anime_order[1:]):
+        value_a = get_comparison_value(anime_a, metric)
+        value_b = get_comparison_value(anime_b, metric)
+        if value_a is None or value_b is None or value_a == value_b:
+            return False
+        pair = normalize_matchup_pair(anime_a["mal_id"], anime_b["mal_id"])
+        if pair in recent_matchup_pairs:
+            return False
+    return True
+
+
+def order_category_for_opening(
+    selected_anime,
+    category,
+    recent_matchup_pairs,
+    random_source,
+    rating_context,
+    series_root_popularity_ranks=None,
+):
+    """Prefer a recognizable, moderately clear first comparison."""
+    # Imported here because challenge_ratings imports the category rules above.
+    from challenge_ratings import comparison_difficulty
+
+    valid_orders = []
+    for attempt in range(OPENING_ORDER_TRIALS + 1):
+        anime_order = selected_anime.copy()
+        if attempt:
+            random_source.shuffle(anime_order)
+        if not has_valid_adjacent_matchups(
+            anime_order, category["metric"], recent_matchup_pairs
+        ):
+            continue
+
+        opening_tier_penalty = sum(
+            OPENING_TIER_PENALTIES[
+                opening_popularity_tier(
+                    anime, category["name"], series_root_popularity_ranks
+                )
+            ]
+            for anime in anime_order[:2]
+        )
+        difficulty = comparison_difficulty(
+            anime_order[0], anime_order[1], category["name"], rating_context
+        )
+        later_difficulties = [
+            comparison_difficulty(
+                anime_order[index],
+                anime_order[index + 1],
+                category["name"],
+                rating_context,
+            )
+            for index in range(1, ANIME_PER_CATEGORY - 1)
+        ]
+        later_average = sum(later_difficulties) / len(later_difficulties)
+        # Discourage a harder-than-rest opener without imposing a cutoff.
+        opening_score = (
+            opening_tier_penalty
+            + abs(difficulty - OPENING_TARGET_DIFFICULTY)
+            * OPENING_DIFFICULTY_WEIGHT
+            + max(0, difficulty - later_average)
+            * OPENING_RELATIVE_DIFFICULTY_WEIGHT
+        )
+        valid_orders.append((opening_score, anime_order))
+
+    # The originally selected chain is always valid, so this cannot make
+    # generation fail when a history-constrained reorder is impossible.
+    best_score = min(score for score, _ in valid_orders)
+    near_best = [
+        anime_order
+        for score, anime_order in valid_orders
+        if score <= best_score + OPENING_NEAR_BEST_MARGIN
+    ]
+    return random_source.choice(near_best)
+
+
 def select_category_anime(
     catalog,
     category,
@@ -191,6 +296,8 @@ def select_category_anime(
     recent_matchup_pairs,
     random_source,
     series_displayable_ids=None,
+    rating_context=None,
+    series_root_popularity_ranks=None,
 ):
     candidates_by_id = {}
 
@@ -247,7 +354,17 @@ def select_category_anime(
         previous_value = selected_value
         previous_anime = chosen_anime
 
-    return selected_anime
+    if rating_context is None:
+        return selected_anime
+
+    return order_category_for_opening(
+        selected_anime,
+        category,
+        recent_matchup_pairs,
+        random_source,
+        rating_context,
+        series_root_popularity_ranks,
+    )
 
 
 def try_generate_challenge(
@@ -256,6 +373,8 @@ def try_generate_challenge(
     recent_matchup_pairs,
     random_source,
     series_displayable_ids=None,
+    rating_context=None,
+    series_root_popularity_ranks=None,
 ):
     for _ in range(MAX_GENERATION_ATTEMPTS):
         used_anime_ids = set()
@@ -270,6 +389,8 @@ def try_generate_challenge(
                 recent_matchup_pairs,
                 random_source,
                 series_displayable_ids,
+                rating_context,
+                series_root_popularity_ranks,
             )
 
             if selected_anime is None:
@@ -297,6 +418,8 @@ def generate_challenge(
     recent_anime_ids=None,
     recent_matchup_pairs=None,
     series_displayable_ids=None,
+    rating_context=None,
+    series_root_popularity_ranks=None,
 ):
     if random_source is None:
         random_source = random
@@ -317,12 +440,19 @@ def generate_challenge(
             "unique MAL entries to build a complete challenge."
         )
 
+    if rating_context is None:
+        from challenge_ratings import build_rating_context
+
+        rating_context = build_rating_context(catalog)
+
     challenge = try_generate_challenge(
         catalog,
         recent_anime_ids,
         recent_matchup_pairs,
         random_source,
         series_displayable_ids,
+        rating_context,
+        series_root_popularity_ranks,
     )
 
     if challenge is not None:
@@ -334,6 +464,8 @@ def generate_challenge(
         recent_matchup_pairs,
         random_source,
         series_displayable_ids,
+        rating_context,
+        series_root_popularity_ranks,
     )
 
     if challenge is not None:
@@ -391,8 +523,8 @@ def load_stored_challenge(challenge_date, database_path=DATABASE_PATH):
     return challenge_from_record(challenge_record)
 
 
-def load_series_displayable_ids(catalog, database_path):
-    """Keep only episodic entries with a verified root for display."""
+def load_series_display_metadata(catalog, database_path):
+    """Keep verified episodic entries and the displayed roots' popularity ranks."""
     episodic_ids = [
         anime["mal_id"]
         for anime in catalog
@@ -400,11 +532,18 @@ def load_series_displayable_ids(catalog, database_path):
         and anime.get("series_episodes") is not None
     ]
     roots = load_series_display_roots(episodic_ids, database_path)
-    return {
+    displayable_ids = {
         anime_id
         for anime_id, root in roots.items()
         if root is not None
     }
+    catalog_by_id = {anime["mal_id"]: anime for anime in catalog}
+    root_popularity_ranks = {
+        anime_id: catalog_by_id[root["mal_id"]].get("popularity_rank")
+        for anime_id, root in roots.items()
+        if root is not None
+    }
+    return displayable_ids, root_popularity_ranks
 
 
 def generate_history_aware_challenge(
@@ -413,7 +552,9 @@ def generate_history_aware_challenge(
     random_source=None,
 ):
     catalog = load_anime_records(database_path)
-    series_displayable_ids = load_series_displayable_ids(catalog, database_path)
+    series_displayable_ids, root_popularity_ranks = load_series_display_metadata(
+        catalog, database_path
+    )
     recent_anime_ids = load_recent_anime_ids(
         challenge_date,
         RECENT_ANIME_DAYS,
@@ -431,6 +572,7 @@ def generate_history_aware_challenge(
         recent_anime_ids,
         recent_matchup_pairs,
         series_displayable_ids,
+        series_root_popularity_ranks=root_popularity_ranks,
     )
 
 
@@ -455,7 +597,9 @@ def generate_challenge_candidates(
         random_source = random
 
     catalog = load_anime_records(database_path)
-    series_displayable_ids = load_series_displayable_ids(catalog, database_path)
+    series_displayable_ids, root_popularity_ranks = load_series_display_metadata(
+        catalog, database_path
+    )
     recent_anime_ids = load_recent_anime_ids(
         challenge_date,
         RECENT_ANIME_DAYS,
@@ -484,6 +628,8 @@ def generate_challenge_candidates(
             recent_anime_ids,
             recent_matchup_pairs,
             series_displayable_ids,
+            rating_context=rating_context,
+            series_root_popularity_ranks=root_popularity_ranks,
         )
         signature = challenge_signature(challenge)
 
