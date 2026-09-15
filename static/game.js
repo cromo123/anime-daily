@@ -4,6 +4,8 @@ const TOTAL_COMPARISONS = TOTAL_ROUNDS * COMPARISONS_PER_ROUND;
 const INTRO_DURATION_MS = 1200;
 const CARD_TRANSITION_MS = 420;
 const CHALLENGER_ENTER_MS = 360;
+const REVEAL_DURATION_MS = 2000;
+const RESULT_PAUSE_MS = 700;
 const PLAYTEST_MODE =
   new URLSearchParams(window.location.search).get("playtest") === "1";
 
@@ -14,10 +16,13 @@ const state = {
   totalScore: 0,
   roundScore: 0,
   answer: null,
+  revealPhase: null,
   waitingForAnswer: false,
   transitioning: false,
   revealedMetrics: new Map(),
   selections: [],
+  reviewEntries: [],
+  runSequence: 0,
   completion: null,
   challengeRequestDate: "today",
   playingArchivedChallenge: false,
@@ -29,6 +34,13 @@ const state = {
 };
 
 let introSequence = 0;
+let audioContext = null;
+const feedbackSounds = new Set();
+const countingSounds = new Set();
+let revealFrameId = null;
+let revealResolve = null;
+let resultPauseId = null;
+let resultPauseResolve = null;
 
 const elements = {
   brand: document.querySelector(".brand"),
@@ -37,6 +49,7 @@ const elements = {
   roundIntro: document.querySelector("#round-intro"),
   gameScreen: document.querySelector("#game-screen"),
   resultsScreen: document.querySelector("#results-screen"),
+  reviewScreen: document.querySelector("#review-screen"),
   archiveScreen: document.querySelector("#archive-screen"),
   archiveResultScreen: document.querySelector("#archive-result-screen"),
   challengeDate: document.querySelector("#challenge-date"),
@@ -52,11 +65,11 @@ const elements = {
   comparisonLabel: document.querySelector("#comparison-label"),
   roundScoreCount: document.querySelector("#round-score-count"),
   animeCards: document.querySelector("#anime-cards"),
-  answerMessage: document.querySelector("#answer-message"),
-  answerResult: document.querySelector("#answer-result"),
-  answerDetail: document.querySelector("#answer-detail"),
   requestError: document.querySelector("#request-error"),
-  nextButton: document.querySelector("#next-button"),
+  retryCompletionButton: document.querySelector("#retry-completion-button"),
+  reviewButton: document.querySelector("#review-button"),
+  reviewReturnButton: document.querySelector("#review-return-button"),
+  reviewList: document.querySelector("#review-list"),
   retryLoadButton: document.querySelector("#retry-load-button"),
   loadErrorMessage: document.querySelector("#load-error-message"),
   finalScore: document.querySelector("#final-score"),
@@ -87,6 +100,7 @@ function showScreen(screen) {
     elements.roundIntro,
     elements.gameScreen,
     elements.resultsScreen,
+    elements.reviewScreen,
     elements.archiveScreen,
     elements.archiveResultScreen,
   ]) {
@@ -101,6 +115,96 @@ function prefersReducedMotion() {
 function wait(milliseconds) {
   const duration = prefersReducedMotion() ? 0 : milliseconds;
   return new Promise((resolve) => window.setTimeout(resolve, duration));
+}
+
+function prepareAudio() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    audioContext ||= new AudioContextClass();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+  } catch {
+    // Audio feedback is optional and must never block an answer.
+  }
+}
+
+function playAnswerSound(correct) {
+  if (!audioContext || audioContext.state !== "running") return;
+  try {
+    const start = audioContext.currentTime;
+    const notes = correct ? [[660, 0], [880, 0.09]] : [[330, 0], [260, 0.11]];
+    for (const [frequency, offset] of notes) {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = correct ? "sine" : "triangle";
+      oscillator.frequency.setValueAtTime(frequency, start + offset);
+      gain.gain.setValueAtTime(0.0001, start + offset);
+      gain.gain.exponentialRampToValueAtTime(0.055, start + offset + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.15);
+      oscillator.connect(gain).connect(audioContext.destination);
+      feedbackSounds.add(oscillator);
+      oscillator.onended = () => feedbackSounds.delete(oscillator);
+      oscillator.start(start + offset);
+      oscillator.stop(start + offset + 0.16);
+    }
+  } catch {
+    // Missing audio support does not affect gameplay.
+  }
+}
+
+function playCountingTick() {
+  if (!audioContext || audioContext.state !== "running" || prefersReducedMotion()) return;
+  try {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const start = audioContext.currentTime;
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(430, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.018, start + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.045);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.05);
+    countingSounds.add(oscillator);
+    oscillator.onended = () => countingSounds.delete(oscillator);
+  } catch {
+    // Counting feedback is optional.
+  }
+}
+
+function stopCountingTicks() {
+  for (const oscillator of countingSounds) {
+    try { oscillator.stop(); } catch { /* Already stopped. */ }
+  }
+  countingSounds.clear();
+}
+
+function cancelPendingFeedback() {
+  if (revealFrameId !== null) window.cancelAnimationFrame(revealFrameId);
+  revealFrameId = null;
+  revealResolve?.();
+  revealResolve = null;
+  if (resultPauseId !== null) window.clearTimeout(resultPauseId);
+  resultPauseId = null;
+  resultPauseResolve?.();
+  resultPauseResolve = null;
+  for (const oscillator of feedbackSounds) {
+    try { oscillator.stop(); } catch { /* Already stopped. */ }
+  }
+  feedbackSounds.clear();
+  stopCountingTicks();
+}
+
+function pauseAfterResult() {
+  return new Promise((resolve) => {
+    resultPauseResolve = resolve;
+    resultPauseId = window.setTimeout(() => {
+      resultPauseId = null;
+      resultPauseResolve = null;
+      resolve();
+    }, RESULT_PAUSE_MS);
+  });
 }
 
 function formatDate(value) {
@@ -162,7 +266,9 @@ async function readJsonResponse(response) {
 }
 
 async function loadChallenge(challengeDate = "today", generateNewPlaytest = false) {
-  introSequence += 1;
+  cancelPendingFeedback();
+  const sequence = ++introSequence;
+  state.runSequence += 1;
   state.challengeRequestDate = challengeDate;
   state.retryGeneratePlaytest = generateNewPlaytest;
   showScreen(elements.loadingScreen);
@@ -199,6 +305,8 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
     }
     const challenge = await readJsonResponse(response);
 
+    if (sequence !== introSequence) return;
+
     if (
       !validateChallenge(challenge) ||
       (PLAYTEST_MODE && !challenge.playtest_id)
@@ -221,6 +329,7 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
     setActiveNavigation(state.playingArchivedChallenge ? "archive" : "today");
     showRoundIntro();
   } catch (error) {
+    if (sequence !== introSequence) return;
     elements.loadErrorMessage.textContent =
       error.message || "Check your connection and try again.";
     showScreen(elements.errorScreen);
@@ -317,16 +426,92 @@ function formatReveal(categoryName, revealedAnime) {
   }
 
   if (categoryName === "More Recent") {
-    return `Released: ${formatDate(revealedAnime.release_date)}`;
+    return `Released: ${revealedAnime.release_date}`;
   }
 
   return "";
 }
 
-function addMetricReveal(cardCopy, revealedAnime) {
+function animatedReveal(categoryName, anime, progress) {
+  const eased = 1 - (1 - progress) ** 3;
+  if (categoryName === "Higher Score") {
+    const score = Math.min(anime.score * eased, anime.score - 0.01);
+    return `Score: ${formatNumber(Math.max(0, score), 2)}`;
+  }
+  if (categoryName === "More Popular") {
+    const members = Math.min(Math.floor(anime.members * eased), anime.members - 1);
+    return `Popularity rank: #— · ${formatNumber(Math.max(0, members))} members`;
+  }
+  if (categoryName === "More Episodes") {
+    const episodes = Math.min(
+      Math.floor(anime.series_episodes * eased), anime.series_episodes - 1,
+    );
+    return `${formatNumber(Math.max(0, episodes))} series episodes`;
+  }
+  if (categoryName === "More Recent") {
+    const year = Number(anime.release_date.slice(0, 4));
+    return `Released: ${Math.min(Math.floor(year - 20 + 20 * eased), year - 1)}`;
+  }
+  return formatReveal(categoryName, anime);
+}
+
+function animateRevealedValues(answer, sequence, alreadyRevealedIds) {
+  const cards = [...elements.animeCards.children];
+  const categoryName = currentRound().name;
+  if (prefersReducedMotion()) return Promise.resolve();
+
+  const metrics = cards.filter(
+    (card) => !alreadyRevealedIds.has(Number(card.dataset.malId)),
+  ).map((card) => ({
+    element: card.querySelector(".metric-reveal"),
+    anime: answer.revealed_anime.find(
+      (item) => item.mal_id === Number(card.dataset.malId),
+    ),
+  }));
+  if (!metrics.length) return Promise.resolve();
+  for (const metric of metrics) {
+    metric.element.textContent = animatedReveal(categoryName, metric.anime, 0);
+  }
+
+  return new Promise((resolve) => {
+    revealResolve = resolve;
+    let startedAt;
+    function frame(now) {
+      if (sequence !== state.runSequence) {
+        revealFrameId = null;
+        revealResolve = null;
+        stopCountingTicks();
+        resolve();
+        return;
+      }
+      startedAt ??= now;
+      const progress = Math.min((now - startedAt) / REVEAL_DURATION_MS, 1);
+      for (const metric of metrics) {
+        const nextText = progress === 1
+          ? formatReveal(categoryName, metric.anime)
+          : animatedReveal(categoryName, metric.anime, progress);
+        if (metric.element.textContent !== nextText) {
+          metric.element.textContent = nextText;
+          playCountingTick();
+        }
+      }
+      if (progress < 1) {
+        revealFrameId = window.requestAnimationFrame(frame);
+      } else {
+        revealFrameId = null;
+        revealResolve = null;
+        stopCountingTicks();
+        resolve();
+      }
+    }
+    revealFrameId = window.requestAnimationFrame(frame);
+  });
+}
+
+function addMetricReveal(cardCopy, revealedAnime, initialText = null) {
   const metric = document.createElement("p");
   metric.className = "metric-reveal";
-  metric.textContent = formatReveal(currentRound().name, revealedAnime);
+  metric.textContent = initialText ?? formatReveal(currentRound().name, revealedAnime);
   cardCopy.append(metric);
 }
 
@@ -374,21 +559,31 @@ function createAnimeCard(anime, choiceNumber, entering = false) {
     const revealedAnime = state.answer.revealed_anime.find(
       (revealed) => revealed.mal_id === anime.mal_id,
     );
-    const isCorrectAnime = anime.mal_id === state.answer.correct_mal_id;
     const wasSelected = anime.mal_id === state.answer.selected_mal_id;
+    const carriedReveal = revealedMetricFor(anime);
 
-    if (isCorrectAnime) {
-      card.classList.add("is-correct");
+    if (state.revealPhase === "resolved") {
+      if (anime.mal_id === state.answer.correct_mal_id) {
+        card.classList.add("is-correct");
+      } else if (wasSelected) {
+        card.classList.add("is-incorrect");
+      } else {
+        card.classList.add("is-dimmed");
+      }
     } else if (wasSelected) {
-      card.classList.add("is-incorrect");
-    } else {
-      card.classList.add("is-dimmed");
+      card.classList.add("is-pending-choice");
+    } else if (carriedReveal) {
+      card.classList.add("is-carried");
     }
 
     if (wasSelected) {
       addChoiceMarker(card);
     }
-    addMetricReveal(cardCopy, revealedAnime);
+    const initialText = state.revealPhase === "suspense" && !carriedReveal &&
+      !prefersReducedMotion()
+      ? animatedReveal(currentRound().name, revealedAnime, 0)
+      : null;
+    addMetricReveal(cardCopy, carriedReveal || revealedAnime, initialText);
   } else {
     const carriedReveal = revealedMetricFor(anime);
 
@@ -417,46 +612,17 @@ function updateRoundStatus() {
   elements.roundScoreCount.textContent = String(state.roundScore);
 }
 
-function updateNextButton() {
-  const isLastComparison =
-    state.comparisonIndex === COMPARISONS_PER_ROUND - 1;
-  const isLastRound = state.roundIndex === TOTAL_ROUNDS - 1;
-
-  if (isLastComparison && isLastRound) {
-    elements.nextButton.textContent = "See final score";
-  } else if (isLastComparison) {
-    elements.nextButton.textContent = "Next round";
-  } else {
-    elements.nextButton.textContent = "NEXT";
-  }
-}
-
 function renderComparison() {
   const animePair = currentAnimePair();
 
   updateRoundStatus();
   elements.requestError.hidden = true;
+  elements.retryCompletionButton.hidden = true;
   elements.animeCards.replaceChildren(
     createAnimeCard(animePair[0], 1),
     createAnimeCard(animePair[1], 2),
   );
 
-  if (state.answer) {
-    elements.nextButton.disabled = state.transitioning;
-    elements.answerResult.textContent = state.answer.correct
-      ? "Good job!"
-      : "Not quite!";
-    elements.answerResult.className = `answer-result ${
-      state.answer.correct ? "correct" : "incorrect"
-    }`;
-    elements.answerDetail.textContent = state.answer.correct
-      ? "you got it right."
-      : "You'll get it next time!";
-    elements.answerMessage.hidden = false;
-    updateNextButton();
-  } else {
-    elements.answerMessage.hidden = true;
-  }
 }
 
 function setChoicesDisabled(disabled) {
@@ -471,7 +637,14 @@ async function submitAnswer(selectedMalId) {
   }
 
   state.waitingForAnswer = true;
+  const sequence = state.runSequence;
+  prepareAudio();
   setChoicesDisabled(true);
+  const selectedCard = [...elements.animeCards.children].find(
+    (card) => Number(card.dataset.malId) === selectedMalId,
+  );
+  selectedCard.classList.add("is-pending-choice");
+  addChoiceMarker(selectedCard);
   elements.requestError.hidden = true;
 
   try {
@@ -491,29 +664,57 @@ async function submitAnswer(selectedMalId) {
       }),
     });
     const answer = await readJsonResponse(response);
+    if (sequence !== state.runSequence) return;
 
-    rememberRevealedMetrics(answer);
+    const [leftAnime, rightAnime] = currentAnimePair();
+    state.reviewEntries.push({
+      category: currentRound().name,
+      position: state.comparisonIndex + 1,
+      leftAnime: { mal_id: leftAnime.mal_id, title: leftAnime.title },
+      rightAnime: { mal_id: rightAnime.mal_id, title: rightAnime.title },
+      answer,
+    });
+
+    const alreadyRevealedIds = new Set(
+      [leftAnime, rightAnime]
+        .filter((anime) => revealedMetricFor(anime))
+        .map((anime) => anime.mal_id),
+    );
     state.answer = answer;
+    state.revealPhase = "suspense";
     state.selections.push({
       category: currentRound().name,
       comparison_position: state.comparisonIndex + 1,
       selected_mal_id: selectedMalId,
     });
 
+    renderComparison();
+    await animateRevealedValues(answer, sequence, alreadyRevealedIds);
+    if (sequence !== state.runSequence) return;
+
+    rememberRevealedMetrics(answer);
+    state.revealPhase = "resolved";
     if (answer.correct) {
       state.totalScore += 1;
       state.roundScore += 1;
     }
-
     renderComparison();
+    playAnswerSound(answer.correct);
+    await pauseAfterResult();
+    if (sequence === state.runSequence) await advanceGame();
   } catch (error) {
+    if (sequence !== state.runSequence) return;
+    selectedCard.classList.remove("is-pending-choice");
+    selectedCard.querySelector(".card-verdict")?.remove();
     elements.requestError.textContent = `${
       error.message || "The answer could not be checked."
     } Please try again.`;
     elements.requestError.hidden = false;
     setChoicesDisabled(false);
   } finally {
-    state.waitingForAnswer = false;
+    if (sequence === state.runSequence) {
+      state.waitingForAnswer = false;
+    }
   }
 }
 
@@ -531,8 +732,8 @@ function prepareCarriedCard(card, anime) {
 }
 
 async function animateToNextComparison() {
+  const sequence = state.runSequence;
   state.transitioning = true;
-  elements.nextButton.disabled = true;
 
   const [leftCard, rightCard] = elements.animeCards.children;
   const leftRect = leftCard.getBoundingClientRect();
@@ -550,11 +751,12 @@ async function animateToNextComparison() {
   rightCard.classList.add("chain-carry-left");
 
   await wait(CARD_TRANSITION_MS);
+  if (sequence !== state.runSequence) return;
 
   leftCard.remove();
   state.comparisonIndex += 1;
   state.answer = null;
-  elements.answerMessage.hidden = true;
+  state.revealPhase = null;
   elements.requestError.hidden = true;
 
   const [carriedAnime, incomingAnime] = currentAnimePair();
@@ -564,22 +766,23 @@ async function animateToNextComparison() {
   updateRoundStatus();
 
   await wait(CHALLENGER_ENTER_MS);
+  if (sequence !== state.runSequence) return;
 
   incomingCard.classList.remove("chain-enter-right");
   state.transitioning = false;
-  elements.nextButton.disabled = false;
   setChoicesDisabled(false);
 }
 
 async function animateRoundExit() {
+  const sequence = state.runSequence;
   state.transitioning = true;
-  elements.nextButton.disabled = true;
 
   for (const card of elements.animeCards.children) {
     card.classList.add("round-exit");
   }
 
   await wait(CHALLENGER_ENTER_MS);
+  return sequence === state.runSequence;
 }
 
 function showResults(completion) {
@@ -634,9 +837,87 @@ function showResults(completion) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function makeReviewSide(anime, revealed, entry) {
+  const side = document.createElement("div");
+  side.className = "review-side";
+  if (anime.mal_id === entry.answer.correct_mal_id) side.classList.add("is-correct");
+  if (anime.mal_id === entry.answer.selected_mal_id && !entry.answer.correct) {
+    side.classList.add("is-incorrect");
+  }
+
+  const labels = document.createElement("div");
+  labels.className = "review-labels";
+  if (anime.mal_id === entry.answer.selected_mal_id) {
+    const choice = document.createElement("span");
+    choice.textContent = "Your choice";
+    labels.append(choice);
+  }
+  if (anime.mal_id === entry.answer.correct_mal_id) {
+    const winner = document.createElement("span");
+    winner.textContent = "Correct answer";
+    labels.append(winner);
+  }
+
+  const title = document.createElement("strong");
+  title.textContent = anime.title;
+  const metric = document.createElement("span");
+  metric.className = "review-metric";
+  metric.textContent = formatReveal(entry.category, revealed);
+  side.append(labels, title, metric);
+  return side;
+}
+
+function openReview() {
+  const sections = [];
+  for (let roundIndex = 0; roundIndex < TOTAL_ROUNDS; roundIndex += 1) {
+    const roundEntries = state.reviewEntries.slice(
+      roundIndex * COMPARISONS_PER_ROUND,
+      (roundIndex + 1) * COMPARISONS_PER_ROUND,
+    );
+    if (!roundEntries.length) continue;
+    const section = document.createElement("section");
+    section.className = "review-round";
+    const heading = document.createElement("h2");
+    heading.textContent = `Round ${roundIndex + 1} / ${TOTAL_ROUNDS} · ${roundEntries[0].category}`;
+    section.append(heading);
+
+    for (const entry of roundEntries) {
+      const item = document.createElement("article");
+      item.className = "review-item";
+      const status = document.createElement("p");
+      status.className = `review-status ${entry.answer.correct ? "correct" : "incorrect"}`;
+      status.textContent = `Comparison ${entry.position} / ${COMPARISONS_PER_ROUND} · ${
+        entry.answer.correct ? "Correct" : "Incorrect"
+      }`;
+      const pair = document.createElement("div");
+      pair.className = "review-pair";
+      const revealed = entry.answer.revealed_anime;
+      pair.append(
+        makeReviewSide(
+          entry.leftAnime,
+          revealed.find((anime) => anime.mal_id === entry.leftAnime.mal_id),
+          entry,
+        ),
+        makeReviewSide(
+          entry.rightAnime,
+          revealed.find((anime) => anime.mal_id === entry.rightAnime.mal_id),
+          entry,
+        ),
+      );
+      item.append(status, pair);
+      section.append(item);
+    }
+    sections.push(section);
+  }
+  elements.reviewList.replaceChildren(...sections);
+  showScreen(elements.reviewScreen);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 async function submitCompletion() {
-  elements.nextButton.textContent = "Saving result…";
-  elements.nextButton.disabled = true;
+  const sequence = state.runSequence;
+  state.transitioning = true;
+  elements.retryCompletionButton.hidden = true;
 
   try {
     const challengeDate = encodeURIComponent(state.challenge.challenge_date);
@@ -649,18 +930,19 @@ async function submitCompletion() {
       body: JSON.stringify({ answers: state.selections }),
     });
     const completion = await readJsonResponse(response);
+    if (sequence !== state.runSequence) return;
     showResults(completion);
   } catch (error) {
+    if (sequence !== state.runSequence) return;
     for (const card of elements.animeCards.children) {
       card.classList.remove("round-exit");
     }
 
     elements.requestError.textContent = `${
       error.message || "Your completed run could not be verified."
-    } Press the button to try saving the result again.`;
+    } Try saving the result again.`;
     elements.requestError.hidden = false;
-    elements.nextButton.textContent = "Retry final result";
-    elements.nextButton.disabled = false;
+    elements.retryCompletionButton.hidden = false;
     state.transitioning = false;
   }
 }
@@ -761,7 +1043,9 @@ function renderArchiveCalendar(archive) {
 }
 
 async function loadArchive(year = state.archiveYear, month = state.archiveMonth) {
+  cancelPendingFeedback();
   introSequence += 1;
+  state.runSequence += 1;
   state.archiveYear = year;
   state.archiveMonth = month;
   elements.archiveError.hidden = true;
@@ -815,15 +1099,15 @@ async function advanceGame() {
     return;
   }
 
-  await animateRoundExit();
+  if (!await animateRoundExit()) return;
 
   if (state.roundIndex < TOTAL_ROUNDS - 1) {
     state.roundIndex += 1;
     state.comparisonIndex = 0;
     state.roundScore = 0;
     state.answer = null;
+    state.revealPhase = null;
     state.transitioning = false;
-    elements.answerMessage.hidden = true;
     showRoundIntro();
   } else {
     if (PLAYTEST_MODE) {
@@ -835,25 +1119,37 @@ async function advanceGame() {
 }
 
 function resetGame() {
+  cancelPendingFeedback();
+  state.runSequence += 1;
   state.roundIndex = 0;
   state.comparisonIndex = 0;
   state.totalScore = 0;
   state.roundScore = 0;
   state.answer = null;
+  state.revealPhase = null;
   state.waitingForAnswer = false;
   state.transitioning = false;
   state.revealedMetrics.clear();
   state.selections = [];
+  state.reviewEntries = [];
   state.completion = null;
+  elements.reviewList.replaceChildren();
+  elements.retryCompletionButton.hidden = true;
 }
 
 function replayGame() {
+  introSequence += 1;
   resetGame();
   showRoundIntro();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-elements.nextButton.addEventListener("click", advanceGame);
+elements.retryCompletionButton.addEventListener("click", submitCompletion);
+elements.reviewButton.addEventListener("click", openReview);
+elements.reviewReturnButton.addEventListener("click", () => {
+  showScreen(elements.resultsScreen);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 elements.retryLoadButton.addEventListener("click", () =>
   loadChallenge(state.challengeRequestDate, state.retryGeneratePlaytest),
 );

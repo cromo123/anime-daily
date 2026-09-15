@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Anime Daily — four categories, twenty daily anime comparisons."
+      content="AniMoredle — four categories, twenty daily anime comparisons."
     >
-    <title>Anime Daily</title>
+    <title>AniMoredle</title>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="/static/game.js" defer></script>
   </head>
@@ -16,9 +16,9 @@
 
     <main class="app-shell">
       <header class="topbar">
-        <a class="brand" href="/" aria-label="Anime Daily home">
-          <span class="brand-mark" aria-hidden="true">AD</span>
-          <span>Anime Daily</span>
+        <a class="brand" href="/" aria-label="AniMoredle home">
+          <span class="brand-mark" aria-hidden="true">AN</span>
+          <span>AniMoredle</span>
         </a>
 
         <div class="topbar-actions">
@@ -84,17 +84,10 @@
 
         <div id="anime-cards" class="anime-grid" aria-live="polite"></div>
 
-        <div id="answer-message" class="answer-message" role="status" hidden>
-          <div>
-            <p id="answer-result" class="answer-result"></p>
-            <p id="answer-detail" class="answer-detail"></p>
-          </div>
-          <button id="next-button" class="primary-button next-button" type="button">
-            NEXT
-          </button>
-        </div>
-
         <p id="request-error" class="request-error" role="alert" hidden></p>
+        <button id="retry-completion-button" class="secondary-button retry-completion" type="button" hidden>
+          Retry saving result
+        </button>
 
         <aside class="promo-slot" aria-label="Future promotional space">
           <span>PROMO</span>
@@ -112,6 +105,9 @@
           Come back tomorrow for a new set, or replay today’s exact challenge.
         </p>
         <div class="result-actions">
+          <button id="review-button" class="secondary-button" type="button">
+            Review comparisons
+          </button>
           <button id="replay-button" class="primary-button" type="button">
             Replay today’s challenge
           </button>
@@ -122,6 +118,20 @@
             Return to archive
           </button>
         </div>
+      </section>
+
+      <section id="review-screen" class="review-screen" hidden>
+        <div class="review-heading">
+          <div>
+            <p class="eyebrow">Completed challenge</p>
+            <h1>Comparison review</h1>
+            <p>Every matchup and the values revealed after your answer.</p>
+          </div>
+          <button id="review-return-button" class="secondary-button" type="button">
+            Return to results
+          </button>
+        </div>
+        <div id="review-list" class="review-list"></div>
       </section>
 
       <section id="archive-screen" class="archive-screen" hidden>
@@ -175,7 +185,7 @@
 
       <noscript>
         <p class="noscript-message">
-          Anime Daily needs JavaScript enabled to play the daily challenge.
+          AniMoredle needs JavaScript enabled to play the daily challenge.
         </p>
       </noscript>
     </main>

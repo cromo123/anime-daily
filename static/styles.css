@@ -363,6 +363,11 @@ button {
   box-shadow: 0 0 0 1px rgba(78, 231, 213, 0.25), 0 1.2rem 3.5rem rgba(0, 0, 0, 0.25);
 }
 
+.anime-card.is-pending-choice {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(78, 231, 213, 0.35), 0 1.2rem 3.5rem rgba(0, 0, 0, 0.25);
+}
+
 .anime-card.chain-exit-left {
   pointer-events: none;
   animation: card-exit-left 420ms cubic-bezier(0.55, 0, 0.8, 0.45) forwards;
@@ -487,43 +492,6 @@ button {
   text-transform: uppercase;
 }
 
-.answer-message {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  max-width: 58rem;
-  margin: 1rem auto 0;
-  padding: 1rem 1.1rem;
-  background: var(--surface-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-medium);
-}
-
-.answer-result,
-.answer-detail {
-  margin: 0;
-}
-
-.answer-result {
-  font-size: 1.05rem;
-  font-weight: 850;
-}
-
-.answer-result.correct {
-  color: var(--success);
-}
-
-.answer-result.incorrect {
-  color: var(--danger);
-}
-
-.answer-detail {
-  margin-top: 0.2rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
 .primary-button {
   min-height: 3rem;
   padding: 0.75rem 1.15rem;
@@ -555,6 +523,10 @@ button {
   padding: 0.75rem 1.15rem;
 }
 
+#review-button {
+  text-transform: none;
+}
+
 .icon-button {
   width: 3rem;
   padding: 0;
@@ -566,10 +538,6 @@ button {
   border-color: rgba(78, 231, 213, 0.65);
 }
 
-.next-button {
-  flex: 0 0 auto;
-}
-
 .request-error {
   max-width: 58rem;
   margin: 1rem auto 0;
@@ -579,6 +547,11 @@ button {
   border: 1px solid rgba(255, 113, 133, 0.45);
   border-radius: 0.8rem;
   text-align: center;
+}
+
+.retry-completion {
+  display: block;
+  margin: 1rem auto 0;
 }
 
 .promo-slot {
@@ -655,6 +628,116 @@ button {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.75rem;
+}
+
+.review-screen {
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4rem) 0;
+}
+
+.review-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.review-heading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: -0.05em;
+}
+
+.review-heading p:not(.eyebrow) {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+}
+
+.review-round {
+  margin-bottom: 2.25rem;
+}
+
+.review-round h2 {
+  margin: 0 0 0.8rem;
+  color: var(--cyan);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.review-item {
+  margin-bottom: 0.65rem;
+  padding: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+}
+
+.review-status {
+  margin: 0 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-status.correct {
+  color: var(--success);
+}
+
+.review-status.incorrect {
+  color: var(--danger);
+}
+
+.review-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.review-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.review-side.is-correct {
+  border-color: var(--success);
+}
+
+.review-side.is-incorrect {
+  border-color: var(--danger);
+}
+
+.review-labels {
+  display: flex;
+  min-height: 1rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.63rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.review-side strong,
+.review-metric {
+  overflow-wrap: anywhere;
+}
+
+.review-side strong {
+  line-height: 1.25;
+}
+
+.review-metric {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .archive-screen {
@@ -1005,6 +1088,35 @@ button {
     width: 100%;
   }
 
+  .review-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .review-heading button {
+    align-self: flex-start;
+  }
+
+  .review-item {
+    padding: 0.65rem;
+  }
+
+  .review-pair {
+    gap: 0.4rem;
+  }
+
+  .review-side {
+    padding: 0.55rem;
+  }
+
+  .review-side strong {
+    font-size: 0.85rem;
+  }
+
+  .review-metric {
+    font-size: 0.75rem;
+  }
+
   .anime-card {
     grid-template-columns: 42% 1fr;
   }
@@ -1013,14 +1125,6 @@ button {
     padding: 0.9rem;
   }
 
-  .answer-message {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .next-button {
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

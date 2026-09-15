@@ -1,12 +1,12 @@
-# Anime Daily
+# AniMoredle
 
-Anime Daily is a daily anime comparison web game inspired by higher/lower games. Players compare anime using factual metrics such as score, popularity, episode count, and release date.
+AniMoredle is a daily anime comparison web game inspired by higher/lower games. Players compare anime using factual metrics such as score, popularity, episode count, and release date.
 
 The long-term goal is to deliver one shared challenge each day, generated automatically from structured anime data. AI agents will help curate interesting matchups and review challenge quality, while deterministic Python logic will validate every factual answer.
 
 ## Current Status
 
-Anime Daily is in early development. Its gameplay, data pipeline, and supporting infrastructure are currently being designed and built.
+AniMoredle is in early development. Its gameplay, data pipeline, and supporting infrastructure are currently being designed and built.
 
 ## Planned Features
 

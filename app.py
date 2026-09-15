@@ -45,7 +45,7 @@ DEV_MODE = os.getenv("ANIME_DAILY_DEV_MODE", "").lower() in {
     "yes",
 }
 
-app = FastAPI(title="Anime Daily")
+app = FastAPI(title="AniMoredle")
 app.state.database_path = DATABASE_PATH
 app.state.player_cookie_secure = PLAYER_COOKIE_SECURE
 app.state.playtest = None
