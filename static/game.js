@@ -11,6 +11,7 @@ const PLAYTEST_MODE =
 
 const state = {
   challenge: null,
+  todayChallenge: null,
   roundIndex: 0,
   comparisonIndex: 0,
   totalScore: 0,
@@ -31,6 +32,8 @@ const state = {
   archiveData: null,
   selectedArchiveDate: null,
   retryGeneratePlaytest: false,
+  visibleScreen: null,
+  lastGameplayScreen: null,
 };
 
 let introSequence = 0;
@@ -94,6 +97,15 @@ const elements = {
 };
 
 function showScreen(screen) {
+  state.visibleScreen = screen;
+  if (
+    screen === elements.roundIntro ||
+    screen === elements.gameScreen ||
+    screen === elements.resultsScreen ||
+    screen === elements.reviewScreen
+  ) {
+    state.lastGameplayScreen = screen;
+  }
   for (const candidate of [
     elements.loadingScreen,
     elements.errorScreen,
@@ -241,6 +253,15 @@ function setActiveNavigation(activeView) {
   elements.archiveNavButton.toggleAttribute("aria-current", !todayIsActive);
 }
 
+function restoreTodayView() {
+  state.challenge = state.todayChallenge;
+  state.playingArchivedChallenge = false;
+  elements.challengeLabel.textContent = PLAYTEST_MODE ? "PLAYTEST" : "Daily challenge";
+  elements.challengeDate.textContent = formatDate(state.challenge.challenge_date);
+  setActiveNavigation("today");
+  showScreen(state.lastGameplayScreen || elements.gameScreen);
+}
+
 function validateChallenge(challenge) {
   return (
     challenge &&
@@ -314,6 +335,10 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
       throw new Error("The daily challenge data is incomplete.");
     }
 
+    const isTodayChallenge = PLAYTEST_MODE || challenge.challenge_date === localDateString();
+    if (isTodayChallenge) {
+      state.todayChallenge = challenge;
+    }
     state.challenge = challenge;
     state.playingArchivedChallenge = !PLAYTEST_MODE &&
       challenge.challenge_date !== localDateString();
@@ -1157,9 +1182,16 @@ elements.replayButton.addEventListener("click", replayGame);
 elements.newPlaytestButton.addEventListener("click", () =>
   loadChallenge("playtest", true),
 );
-elements.todayNavButton.addEventListener("click", () =>
-  loadChallenge(PLAYTEST_MODE ? "playtest" : "today"),
-);
+elements.todayNavButton.addEventListener("click", () => {
+  if (
+    state.todayChallenge &&
+    (PLAYTEST_MODE || state.todayChallenge.challenge_date === localDateString())
+  ) {
+    restoreTodayView();
+    return;
+  }
+  loadChallenge(PLAYTEST_MODE ? "playtest" : "today");
+});
 elements.archiveNavButton.addEventListener("click", () => loadArchive());
 elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
 elements.nextMonthButton.addEventListener("click", () => changeArchiveMonth(1));
