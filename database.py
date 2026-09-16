@@ -111,6 +111,23 @@ CREATE TABLE IF NOT EXISTS player_results (
 
 CREATE INDEX IF NOT EXISTS player_results_challenge_index
 ON player_results(challenge_id);
+
+CREATE TABLE IF NOT EXISTS player_answers (
+    player_id TEXT NOT NULL,
+    challenge_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    comparison_position INTEGER NOT NULL CHECK (comparison_position BETWEEN 1 AND 5),
+    selected_mal_id INTEGER NOT NULL,
+    correct_mal_id INTEGER NOT NULL,
+    correct INTEGER NOT NULL CHECK (correct IN (0, 1)),
+    answered_at TEXT NOT NULL,
+    PRIMARY KEY (player_id, challenge_id, category, comparison_position),
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenge_id) REFERENCES challenge_runs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS player_answers_challenge_index
+ON player_answers(player_id, challenge_id);
 """
 
 UPSERT_ANIME = """
@@ -1166,6 +1183,75 @@ def load_player_results(player_id, database_path=DATABASE_PATH):
     finally:
         connection.close()
 
+    return [dict(row) for row in rows]
+
+
+def record_player_answer(
+    player_id,
+    challenge_id,
+    category,
+    comparison_position,
+    selected_mal_id,
+    correct_mal_id,
+    correct,
+    database_path=DATABASE_PATH,
+    answered_at=None,
+):
+    if answered_at is None:
+        answered_at = datetime.now(timezone.utc).isoformat()
+
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO player_answers (
+                player_id, challenge_id, category, comparison_position,
+                selected_mal_id, correct_mal_id, correct, answered_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                player_id, challenge_id, category, comparison_position,
+                selected_mal_id, correct_mal_id, int(correct), answered_at,
+            ),
+        )
+        row = connection.execute(
+            """
+            SELECT player_id, challenge_id, category, comparison_position,
+                   selected_mal_id, correct_mal_id, correct, answered_at
+            FROM player_answers
+            WHERE player_id = ? AND challenge_id = ? AND category = ?
+              AND comparison_position = ?
+            """,
+            (player_id, challenge_id, category, comparison_position),
+        ).fetchone()
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return dict(row)
+
+
+def load_player_answers(player_id, challenge_id, database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute(
+            """
+            SELECT player_id, challenge_id, category, comparison_position,
+                   selected_mal_id, correct_mal_id, correct, answered_at
+            FROM player_answers
+            WHERE player_id = ? AND challenge_id = ?
+            ORDER BY category, comparison_position
+            """,
+            (player_id, challenge_id),
+        ).fetchall()
+    finally:
+        connection.close()
     return [dict(row) for row in rows]
 
 

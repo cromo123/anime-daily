@@ -34,6 +34,7 @@ const state = {
   retryGeneratePlaytest: false,
   visibleScreen: null,
   lastGameplayScreen: null,
+  officialAttempt: false,
 };
 
 let introSequence = 0;
@@ -255,6 +256,7 @@ function setActiveNavigation(activeView) {
 
 function restoreTodayView() {
   state.challenge = state.todayChallenge;
+  state.officialAttempt = !PLAYTEST_MODE;
   state.playingArchivedChallenge = false;
   elements.challengeLabel.textContent = PLAYTEST_MODE ? "PLAYTEST" : "Daily challenge";
   elements.challengeDate.textContent = formatDate(state.challenge.challenge_date);
@@ -273,6 +275,68 @@ function validateChallenge(challenge) {
         category.anime.length === COMPARISONS_PER_ROUND + 1,
     )
   );
+}
+
+function restoreOfficialProgress(progress) {
+  if (!progress || !Array.isArray(progress.answers) || !progress.answers.length) {
+    return false;
+  }
+
+  for (const answer of progress.answers) {
+    const categoryIndex = state.challenge.categories.findIndex(
+      (category) => category.name === answer.category,
+    );
+    if (categoryIndex < 0) continue;
+    const category = state.challenge.categories[categoryIndex];
+    const leftAnime = category.anime[answer.comparison_position - 1];
+    const rightAnime = category.anime[answer.comparison_position];
+    state.revealedMetrics.set(
+      `${categoryIndex}:${answer.revealed_anime[0].mal_id}`,
+      answer.revealed_anime[0],
+    );
+    state.revealedMetrics.set(
+      `${categoryIndex}:${answer.revealed_anime[1].mal_id}`,
+      answer.revealed_anime[1],
+    );
+    state.reviewEntries.push({
+      category: answer.category,
+      position: answer.comparison_position,
+      leftAnime: { mal_id: leftAnime.mal_id, title: leftAnime.title },
+      rightAnime: { mal_id: rightAnime.mal_id, title: rightAnime.title },
+      answer,
+    });
+    state.selections.push({
+      category: answer.category,
+      comparison_position: answer.comparison_position,
+      selected_mal_id: answer.selected_mal_id,
+    });
+  }
+  state.totalScore = progress.score || 0;
+  const answeredKeys = new Set(
+    state.selections.map(
+      (selection) => `${selection.category}:${selection.comparison_position}`,
+    ),
+  );
+  for (let roundIndex = 0; roundIndex < state.challenge.categories.length; roundIndex += 1) {
+    const category = state.challenge.categories[roundIndex];
+    for (let position = 1; position < category.anime.length; position += 1) {
+      if (!answeredKeys.has(`${category.name}:${position}`)) {
+        state.roundIndex = roundIndex;
+        state.comparisonIndex = position - 1;
+        state.roundScore = state.selections.filter(
+          (selection) => selection.category === category.name,
+        ).reduce((score, selection) => {
+          const answer = progress.answers.find(
+            (item) => item.category === selection.category &&
+              item.comparison_position === selection.comparison_position,
+          );
+          return score + (answer?.correct ? 1 : 0);
+        }, 0);
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 async function readJsonResponse(response) {
@@ -342,7 +406,9 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
     state.challenge = challenge;
     state.playingArchivedChallenge = !PLAYTEST_MODE &&
       challenge.challenge_date !== localDateString();
+    state.officialAttempt = !PLAYTEST_MODE;
     resetGame();
+    const progressComplete = !PLAYTEST_MODE && restoreOfficialProgress(challenge.progress);
     elements.challengeDate.textContent = formatDate(challenge.challenge_date);
     if (PLAYTEST_MODE) {
       elements.challengeLabel.textContent = "PLAYTEST";
@@ -352,7 +418,17 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
         : "Daily challenge";
     }
     setActiveNavigation(state.playingArchivedChallenge ? "archive" : "today");
-    showRoundIntro();
+    if (progressComplete) {
+      showResults({
+        verified_score: state.totalScore,
+        verified_percentage: state.totalScore / TOTAL_COMPARISONS * 100,
+        official_score: state.totalScore,
+        total_questions: TOTAL_COMPARISONS,
+        replay: false,
+      });
+    } else {
+      showRoundIntro();
+    }
   } catch (error) {
     if (sequence !== introSequence) return;
     elements.loadErrorMessage.textContent =
@@ -673,7 +749,7 @@ async function submitAnswer(selectedMalId) {
   elements.requestError.hidden = true;
 
   try {
-    const answerPath = PLAYTEST_MODE
+    const answerPath = !state.officialAttempt
       ? `/dev/playtest/${encodeURIComponent(state.challenge.playtest_id)}/answer`
       : `/challenge/${encodeURIComponent(state.challenge.challenge_date)}/answer`;
     const response = await fetch(answerPath, {

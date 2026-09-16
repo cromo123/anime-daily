@@ -26,6 +26,8 @@ from database import (
     load_challenge_record,
     load_month_archive,
     load_player_results,
+    load_player_answers,
+    record_player_answer,
     record_player_result,
 )
 
@@ -169,11 +171,15 @@ def load_challenge_for_api(requested_date):
     return challenge
 
 
-def evaluate_answer_for_date(requested_date, answer):
+def evaluate_answer_for_date(requested_date, answer, player_id=None):
     challenge_date = requested_date.isoformat()
 
     try:
         challenge = load_stored_challenge(
+            challenge_date,
+            app.state.database_path,
+        )
+        challenge_record = load_challenge_record(
             challenge_date,
             app.state.database_path,
         )
@@ -185,19 +191,81 @@ def evaluate_answer_for_date(requested_date, answer):
     if challenge is None:
         raise HTTPException(status_code=404, detail="Challenge not found.")
 
+    existing = None
+    if player_id is not None and challenge_record is not None:
+        existing = next(
+            (
+                row for row in load_player_answers(
+                    player_id, challenge_record["id"], app.state.database_path
+                )
+                if row["category"] == answer.category
+                and row["comparison_position"] == answer.comparison_position
+            ),
+            None,
+        )
+
     try:
         result = evaluate_comparison(
             challenge,
             answer.category,
             answer.comparison_position,
-            answer.selected_mal_id,
+            existing["selected_mal_id"] if existing else answer.selected_mal_id,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
+    if existing is not None:
+        return {"challenge_date": challenge_date, **result}
+
+    if player_id is not None:
+        record_player_answer(
+            player_id,
+            challenge_record["id"],
+            answer.category,
+            answer.comparison_position,
+            answer.selected_mal_id,
+            result["correct_mal_id"],
+            result["correct"],
+            app.state.database_path,
+        )
     return {"challenge_date": challenge_date, **result}
+
+
+def challenge_with_progress(request, requested_date, challenge):
+    payload = serialize_public_challenge(
+        requested_date, challenge, app.state.database_path
+    )
+    if getattr(request.state, "player_id", None) is None:
+        return payload
+    record = load_challenge_record(requested_date.isoformat(), app.state.database_path)
+    rows = load_player_answers(request.state.player_id, record["id"], app.state.database_path)
+    answers = []
+    for row in rows:
+        result = evaluate_comparison(
+            challenge, row["category"], row["comparison_position"], row["selected_mal_id"]
+        )
+        answers.append(result)
+    keys = {(row["category"], row["comparison_position"]) for row in rows}
+    next_comparison = None
+    for category in challenge:
+        for position in range(1, len(category["anime"])):
+            if (category["name"], position) not in keys:
+                next_comparison = {
+                    "category": category["name"],
+                    "comparison_position": position,
+                }
+                break
+        if next_comparison:
+            break
+    payload["progress"] = {
+        "answers": answers,
+        "score": sum(result["correct"] for result in answers),
+        "next": next_comparison,
+        "complete": next_comparison is None and bool(answers),
+    }
+    return payload
 
 
 @app.get("/", include_in_schema=False)
@@ -211,36 +279,28 @@ def health():
 
 
 @app.get("/challenge/today")
-def get_today_challenge():
+def get_today_challenge(request: Request):
     requested_date = date.today()
     challenge = load_challenge_for_api(requested_date)
-    return serialize_public_challenge(
-        requested_date,
-        challenge,
-        app.state.database_path,
-    )
+    return challenge_with_progress(request, requested_date, challenge)
 
 
 @app.get("/challenge/{challenge_date}")
 def get_dated_challenge(challenge_date: str):
     requested_date = parse_challenge_date(challenge_date)
     challenge = load_challenge_for_api(requested_date)
-    return serialize_public_challenge(
-        requested_date,
-        challenge,
-        app.state.database_path,
-    )
+    return challenge_with_progress(request, requested_date, challenge)
 
 
 @app.post("/challenge/today/answer")
-def answer_today_comparison(answer: AnswerRequest):
-    return evaluate_answer_for_date(date.today(), answer)
+def answer_today_comparison(request: Request, answer: AnswerRequest):
+    return evaluate_answer_for_date(date.today(), answer, request.state.player_id)
 
 
 @app.post("/challenge/{challenge_date}/answer")
-def answer_dated_comparison(challenge_date: str, answer: AnswerRequest):
+def answer_dated_comparison(challenge_date: str, request: Request, answer: AnswerRequest):
     requested_date = parse_challenge_date(challenge_date)
-    return evaluate_answer_for_date(requested_date, answer)
+    return evaluate_answer_for_date(requested_date, answer, request.state.player_id)
 
 
 @app.post("/challenge/{challenge_date}/complete")
