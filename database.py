@@ -1,6 +1,13 @@
+import os
+import re
 import sqlite3
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+try:
+    import psycopg
+except ImportError:  # pragma: no cover - SQLite-only environments
+    psycopg = None
 
 
 DATABASE_PATH = Path(__file__).parent / "data" / "anime_daily.db"
@@ -130,6 +137,11 @@ CREATE INDEX IF NOT EXISTS player_answers_challenge_index
 ON player_answers(player_id, challenge_id);
 """
 
+POSTGRES_ANIME_MIGRATIONS = (
+    "ALTER TABLE anime ADD COLUMN IF NOT EXISTS image_url TEXT",
+    "ALTER TABLE anime ADD COLUMN IF NOT EXISTS relations_fetched INTEGER NOT NULL DEFAULT 0",
+)
+
 UPSERT_ANIME = """
 INSERT INTO anime (
     mal_id,
@@ -163,7 +175,106 @@ MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
 FAILURE_STATE_KEY = "catalog_failures_initialized"
 
 
+class _HybridRow(dict):
+    """A small row compatible with both SQLite's key and index access."""
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return tuple(self.values())[key]
+        return super().__getitem__(key)
+
+
+def _postgres_enabled(database_path):
+    configured_url = os.getenv("DATABASE_URL")
+    if not configured_url or psycopg is None:
+        return False
+    # Explicit temporary/alternate paths remain SQLite during migration.
+    return Path(database_path).resolve() == DATABASE_PATH.resolve()
+
+
+def _replace_placeholders(sql):
+    """Convert SQLite placeholders outside quoted SQL strings for psycopg."""
+    result = []
+    quote = None
+    for character in sql:
+        if character in ("'", '"'):
+            if quote == character:
+                quote = None
+            elif quote is None:
+                quote = character
+        if character == "?" and quote is None:
+            result.append("%s")
+        else:
+            result.append(character)
+    return "".join(result)
+
+
+def _adapt_postgres_sql(sql):
+    sql = _replace_placeholders(sql)
+    if re.search(r"INSERT\s+OR\s+IGNORE\s+INTO", sql, re.IGNORECASE):
+        sql = re.sub(
+            r"INSERT\s+OR\s+IGNORE\s+INTO",
+            "INSERT INTO",
+            sql,
+            flags=re.IGNORECASE,
+        )
+        sql = sql.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING"
+    return sql
+
+
+class _PostgresCursor:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.rowcount = cursor.rowcount
+
+    def _row(self, row):
+        if row is None:
+            return None
+        columns = [column.name for column in self._cursor.description]
+        return _HybridRow(zip(columns, row))
+
+    def fetchone(self):
+        return self._row(self._cursor.fetchone())
+
+    def fetchall(self):
+        return [self._row(row) for row in self._cursor.fetchall()]
+
+
+class _PostgresConnection:
+    is_postgres = True
+
+    def __init__(self, url):
+        self._connection = psycopg.connect(url)
+        self.row_factory = None
+
+    def execute(self, sql, parameters=()):
+        cursor = self._connection.execute(_adapt_postgres_sql(sql), parameters)
+        return _PostgresCursor(cursor)
+
+    def executemany(self, sql, parameter_rows):
+        cursor = self._connection.cursor()
+        cursor.executemany(_adapt_postgres_sql(sql), parameter_rows)
+        return _PostgresCursor(cursor)
+
+    def executescript(self, script):
+        for statement in script.split(";"):
+            if statement.strip():
+                self.execute(statement)
+
+    def commit(self):
+        self._connection.commit()
+
+    def rollback(self):
+        self._connection.rollback()
+
+    def close(self):
+        self._connection.close()
+
+
 def _connect_database(database_path):
+    if _postgres_enabled(database_path):
+        return _PostgresConnection(os.environ["DATABASE_URL"])
+
     connection = sqlite3.connect(database_path)
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
@@ -182,6 +293,27 @@ def _migrate_anime_table(connection):
             "ALTER TABLE anime "
             "ADD COLUMN relations_fetched INTEGER NOT NULL DEFAULT 0"
         )
+
+
+def _initialize_postgres(connection):
+    # The CREATE statements are portable; PostgreSQL needs a serial identity
+    # for challenge IDs and explicit ALTER statements for existing databases.
+    connection.execute(CREATE_ANIME_TABLE)
+    for statement in POSTGRES_ANIME_MIGRATIONS:
+        connection.execute(statement)
+    connection.executescript(CREATE_INGESTION_TABLES)
+    connection.executescript(CREATE_HISTORY_TABLES.replace(
+        "id INTEGER PRIMARY KEY", "id BIGSERIAL PRIMARY KEY", 1
+    ))
+    connection.executescript(CREATE_PLAYER_TABLES)
+
+
+def _initialize_sqlite(connection):
+    connection.execute(CREATE_ANIME_TABLE)
+    _migrate_anime_table(connection)
+    connection.executescript(CREATE_INGESTION_TABLES)
+    connection.executescript(CREATE_HISTORY_TABLES)
+    connection.executescript(CREATE_PLAYER_TABLES)
 
 
 def _parse_challenge_date(challenge_date):
@@ -203,15 +335,15 @@ def normalize_matchup_pair(anime_a_id, anime_b_id):
 
 def initialize_database(database_path=DATABASE_PATH):
     database_path = Path(database_path)
-    database_path.parent.mkdir(parents=True, exist_ok=True)
+    if not _postgres_enabled(database_path):
+        database_path.parent.mkdir(parents=True, exist_ok=True)
     connection = _connect_database(database_path)
 
     try:
-        connection.execute(CREATE_ANIME_TABLE)
-        _migrate_anime_table(connection)
-        connection.executescript(CREATE_INGESTION_TABLES)
-        connection.executescript(CREATE_HISTORY_TABLES)
-        connection.executescript(CREATE_PLAYER_TABLES)
+        if getattr(connection, "is_postgres", False):
+            _initialize_postgres(connection)
+        else:
+            _initialize_sqlite(connection)
         connection.commit()
     finally:
         connection.close()
@@ -811,7 +943,7 @@ def load_ingestion_failures(database_path=DATABASE_PATH):
 def load_anime_records(database_path=DATABASE_PATH):
     database_path = Path(database_path)
 
-    if not database_path.exists():
+    if not _postgres_enabled(database_path) and not database_path.exists():
         raise RuntimeError(
             f"Anime database not found at {database_path}. Run import_catalog.py first."
         )
@@ -1009,14 +1141,25 @@ def record_challenge(
     connection = _connect_database(database_path)
 
     try:
-        cursor = connection.execute(
-            """
-            INSERT INTO challenge_runs (challenge_date, created_at)
-            VALUES (?, ?)
-            """,
-            (challenge_date, created_at),
-        )
-        challenge_id = cursor.lastrowid
+        if getattr(connection, "is_postgres", False):
+            cursor = connection.execute(
+                """
+                INSERT INTO challenge_runs (challenge_date, created_at)
+                VALUES (?, ?)
+                RETURNING id
+                """,
+                (challenge_date, created_at),
+            )
+            challenge_id = cursor.fetchone()[0]
+        else:
+            cursor = connection.execute(
+                """
+                INSERT INTO challenge_runs (challenge_date, created_at)
+                VALUES (?, ?)
+                """,
+                (challenge_date, created_at),
+            )
+            challenge_id = cursor.lastrowid
 
         for category in challenge:
             category_name = category["name"]
