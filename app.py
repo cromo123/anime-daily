@@ -15,7 +15,6 @@ from challenge import (
     LegacyChallengeError,
     TOTAL_QUESTIONS,
     evaluate_comparison,
-    get_or_create_daily_challenge,
     load_stored_challenge,
     serialize_public_challenge,
     verify_completed_answers,
@@ -150,16 +149,12 @@ def load_challenge_for_api(requested_date):
     challenge_date = requested_date.isoformat()
 
     try:
-        if requested_date == date.today():
-            challenge = get_or_create_daily_challenge(
-                challenge_date,
-                app.state.database_path,
-            )
-        else:
-            challenge = load_stored_challenge(
-                challenge_date,
-                app.state.database_path,
-            )
+        # The API must never substitute another stored day for the requested
+        # official challenge. Daily generation is handled separately.
+        challenge = load_stored_challenge(
+            challenge_date,
+            app.state.database_path,
+        )
     except LegacyChallengeError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except (RuntimeError, ValueError) as error:
@@ -167,6 +162,19 @@ def load_challenge_for_api(requested_date):
 
     if challenge is None:
         raise HTTPException(status_code=404, detail="Challenge not found.")
+
+    synthetic_title = re.compile(
+        r"^(?:Higher Score|More Popular|More Episodes|More Recent)\d+$"
+    )
+    if any(
+        synthetic_title.fullmatch(anime.get("title", ""))
+        for category in challenge
+        for anime in category.get("anime", [])
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="The official challenge is unavailable.",
+        )
 
     return challenge
 

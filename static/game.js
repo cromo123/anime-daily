@@ -349,8 +349,19 @@ function progressSignature(progress) {
     .join("|");
 }
 
+function challengeSignature(challenge) {
+  return (challenge?.categories || [])
+    .map(
+      (category) =>
+        `${category.name}:${(category.anime || [])
+          .map((anime) => anime.mal_id)
+          .join(",")}`,
+    )
+    .join("|");
+}
+
 async function resyncOfficialProgress() {
-  if (PLAYTEST_MODE || !state.todayChallenge || state.playingArchivedChallenge) {
+  if (PLAYTEST_MODE) {
     return;
   }
 
@@ -360,18 +371,28 @@ async function resyncOfficialProgress() {
       cache: "no-store",
     });
     const authoritative = await readJsonResponse(response);
+    const today = localDateString();
     const localProgress = {
       answers: state.selections.map((selection) => selection),
     };
     const serverProgress = authoritative.progress || {};
     if (
+      !state.todayChallenge ||
+      state.playingArchivedChallenge ||
+      state.challenge?.challenge_date !== today ||
+      authoritative.challenge_date !== today ||
+      challengeSignature(state.challenge) !== challengeSignature(authoritative) ||
       progressSignature(localProgress) !== progressSignature(serverProgress) ||
       state.totalScore !== (serverProgress.score || 0)
     ) {
       await loadChallenge("today");
     }
   } catch {
-    // Keep the restored screen usable if a background resync is unavailable.
+    if (!state.challenge || state.challenge.challenge_date !== localDateString()) {
+      elements.loadErrorMessage.textContent =
+        "Today's official challenge is unavailable right now.";
+      showScreen(elements.loadErrorScreen);
+    }
   }
 }
 
