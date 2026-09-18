@@ -339,6 +339,42 @@ function restoreOfficialProgress(progress) {
   return true;
 }
 
+function progressSignature(progress) {
+  return (progress?.answers || [])
+    .map(
+      (answer) =>
+        `${answer.category}:${answer.comparison_position}:${answer.selected_mal_id}`,
+    )
+    .sort()
+    .join("|");
+}
+
+async function resyncOfficialProgress() {
+  if (PLAYTEST_MODE || !state.todayChallenge || state.playingArchivedChallenge) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/challenge/today", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const authoritative = await readJsonResponse(response);
+    const localProgress = {
+      answers: state.selections.map((selection) => selection),
+    };
+    const serverProgress = authoritative.progress || {};
+    if (
+      progressSignature(localProgress) !== progressSignature(serverProgress) ||
+      state.totalScore !== (serverProgress.score || 0)
+    ) {
+      await loadChallenge("today");
+    }
+  } catch {
+    // Keep the restored screen usable if a background resync is unavailable.
+  }
+}
+
 async function readJsonResponse(response) {
   const data = await response.json().catch(() => null);
 
@@ -1276,6 +1312,9 @@ elements.practiceButton.addEventListener("click", () =>
 );
 elements.archiveReturnButton.addEventListener("click", () => loadArchive());
 elements.resultsArchiveButton.addEventListener("click", () => loadArchive());
+window.addEventListener("pageshow", () => {
+  resyncOfficialProgress();
+});
 
 if (PLAYTEST_MODE) {
   elements.brand.href = "/?playtest=1";

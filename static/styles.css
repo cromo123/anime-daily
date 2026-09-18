@@ -555,7 +555,19 @@ button {
 }
 
 .promo-slot {
-  display: none;
+  display: grid;
+  width: min(10rem, 100%);
+  min-height: 7rem;
+  margin: 1.5rem 0 0;
+  place-items: center;
+  color: var(--muted);
+  background: rgba(17, 22, 37, 0.72);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-medium);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  pointer-events: none;
 }
 
 @media (min-width: 1400px) and (min-height: 650px) {
@@ -563,18 +575,6 @@ button {
     position: fixed;
     bottom: 1.5rem;
     left: 1.5rem;
-    display: grid;
-    width: 10rem;
-    min-height: 7rem;
-    place-items: center;
-    color: var(--muted);
-    background: rgba(17, 22, 37, 0.72);
-    border: 1px dashed var(--line);
-    border-radius: var(--radius-medium);
-    font-size: 0.7rem;
-    font-weight: 850;
-    letter-spacing: 0.18em;
-    pointer-events: none;
   }
 }
 
