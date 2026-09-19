@@ -1,7 +1,7 @@
 """Developer-only draft and approval workflow for future challenges."""
 
 from argparse import ArgumentParser
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from challenge import load_stored_challenge
 from daily_challenge_flow import DailyChallengeFlow
@@ -33,6 +33,67 @@ def _run_draft_generation(challenge_date):
     if record is None or record["publication_state"] != "draft":
         raise RuntimeError("Generation did not produce a draft challenge.")
     return record
+
+
+def replenish(days_ahead=7, reference_date=None):
+    """Ensure an approved challenge exists for today through the future buffer."""
+    if days_ahead < 0:
+        raise ValueError("--days-ahead must be zero or greater.")
+
+    if reference_date is None:
+        reference_date = datetime.now(timezone.utc).date()
+
+    unresolved = []
+    for offset in range(days_ahead + 1):
+        challenge_date = reference_date + timedelta(days=offset)
+        date_text = challenge_date.isoformat()
+        existing = load_challenge_record(
+            date_text, DATABASE_PATH, include_drafts=True
+        )
+
+        if existing is not None and existing["publication_state"] == "approved":
+            print(f"{challenge_date}: already approved")
+            continue
+
+        if existing is not None and existing["publication_state"] == "draft":
+            try:
+                set_challenge_publication_state(
+                    date_text, "approved", DATABASE_PATH
+                )
+                print(f"{challenge_date}: existing draft approved")
+            except Exception as error:
+                unresolved.append(challenge_date)
+                print(f"{challenge_date}: replenishment failed: {error}")
+            continue
+
+        try:
+            _run_draft_generation(challenge_date)
+            set_challenge_publication_state(
+                date_text, "approved", DATABASE_PATH
+            )
+            print(f"{challenge_date}: generated and approved")
+        except Exception as error:
+            # A concurrent invocation may have completed this date while this
+            # process was curating it. Re-read the exact date before reporting
+            # a failure; approved challenges are never overwritten.
+            try:
+                concurrent = load_challenge_record(
+                    date_text, DATABASE_PATH, include_drafts=True
+                )
+                if (
+                    concurrent is not None
+                    and concurrent["publication_state"] == "approved"
+                ):
+                    print(f"{challenge_date}: already approved")
+                    continue
+            except Exception:
+                pass
+            unresolved.append(challenge_date)
+            print(f"{challenge_date}: replenishment failed: {error}")
+
+    if unresolved:
+        dates = ", ".join(day.isoformat() for day in unresolved)
+        raise RuntimeError(f"Unapproved target dates remain: {dates}")
 
 
 def generate(start, days):
@@ -138,6 +199,19 @@ def main():
     generate_parser.add_argument("--start", required=True, type=_parse_date)
     generate_parser.add_argument("--days", required=True, type=int)
 
+    replenish_parser = subparsers.add_parser(
+        "replenish",
+        help="Ensure an approved rolling UTC challenge buffer exists.",
+    )
+    replenish_parser.add_argument(
+        "--days-ahead", type=int, default=7,
+        help="Number of future days after the UTC reference date (default: 7).",
+    )
+    replenish_parser.add_argument(
+        "--today", dest="reference_date", type=_parse_date,
+        help="Override the UTC reference date for testing.",
+    )
+
     subparsers.add_parser("list")
     for name in ("inspect", "approve", "regenerate"):
         command_parser = subparsers.add_parser(name)
@@ -146,6 +220,8 @@ def main():
     arguments = parser.parse_args()
     if arguments.command == "generate":
         generate(arguments.start, arguments.days)
+    elif arguments.command == "replenish":
+        replenish(arguments.days_ahead, arguments.reference_date)
     elif arguments.command == "list":
         list_challenges()
     elif arguments.command == "inspect":
