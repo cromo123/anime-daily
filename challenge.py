@@ -514,8 +514,14 @@ def challenge_from_record(challenge_record):
     return challenge
 
 
-def load_stored_challenge(challenge_date, database_path=DATABASE_PATH):
-    challenge_record = load_challenge_record(challenge_date, database_path)
+def load_stored_challenge(
+    challenge_date,
+    database_path=DATABASE_PATH,
+    include_drafts=False,
+):
+    challenge_record = load_challenge_record(
+        challenge_date, database_path, include_drafts=include_drafts
+    )
 
     if challenge_record is None:
         return None

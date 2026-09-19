@@ -59,7 +59,9 @@ CREATE_HISTORY_TABLES = """
 CREATE TABLE IF NOT EXISTS challenge_runs (
     id INTEGER PRIMARY KEY,
     challenge_date TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    publication_state TEXT NOT NULL DEFAULT 'approved'
+        CHECK (publication_state IN ('draft', 'approved'))
 );
 
 CREATE TABLE IF NOT EXISTS challenge_anime (
@@ -136,6 +138,10 @@ CREATE TABLE IF NOT EXISTS player_answers (
 CREATE INDEX IF NOT EXISTS player_answers_challenge_index
 ON player_answers(player_id, challenge_id);
 """
+
+POSTGRES_CHALLENGE_MIGRATIONS = (
+    "ALTER TABLE challenge_runs ADD COLUMN IF NOT EXISTS publication_state TEXT NOT NULL DEFAULT 'approved' CHECK (publication_state IN ('draft', 'approved'))",
+)
 
 POSTGRES_ANIME_MIGRATIONS = (
     "ALTER TABLE anime ADD COLUMN IF NOT EXISTS image_url TEXT",
@@ -305,6 +311,8 @@ def _initialize_postgres(connection):
     connection.executescript(CREATE_HISTORY_TABLES.replace(
         "id INTEGER PRIMARY KEY", "id BIGSERIAL PRIMARY KEY", 1
     ))
+    for statement in POSTGRES_CHALLENGE_MIGRATIONS:
+        connection.execute(statement)
     connection.executescript(CREATE_PLAYER_TABLES)
 
 
@@ -313,6 +321,13 @@ def _initialize_sqlite(connection):
     _migrate_anime_table(connection)
     connection.executescript(CREATE_INGESTION_TABLES)
     connection.executescript(CREATE_HISTORY_TABLES)
+    column_names = {
+        column[1] for column in connection.execute("PRAGMA table_info(challenge_runs)")
+    }
+    if "publication_state" not in column_names:
+        connection.execute(
+            "ALTER TABLE challenge_runs ADD COLUMN publication_state TEXT NOT NULL DEFAULT 'approved'"
+        )
     connection.executescript(CREATE_PLAYER_TABLES)
 
 
@@ -1017,7 +1032,11 @@ def load_recent_anime_ids(challenge_date, recent_days, database_path=DATABASE_PA
     return {row[0] for row in rows}
 
 
-def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
+def load_challenge_record(
+    challenge_date,
+    database_path=DATABASE_PATH,
+    include_drafts=False,
+):
     challenge_date = _parse_challenge_date(challenge_date).isoformat()
     initialize_database(database_path)
     connection = _connect_database(database_path)
@@ -1026,11 +1045,12 @@ def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
     try:
         challenge_run = connection.execute(
             """
-            SELECT id, challenge_date, created_at
+            SELECT id, challenge_date, created_at, publication_state
             FROM challenge_runs
             WHERE challenge_date = ?
+              AND (? OR publication_state = 'approved')
             """,
-            (challenge_date,),
+            (challenge_date, include_drafts),
         ).fetchone()
 
         if challenge_run is None:
@@ -1066,6 +1086,7 @@ def load_challenge_record(challenge_date, database_path=DATABASE_PATH):
         "id": challenge_run["id"],
         "challenge_date": challenge_run["challenge_date"],
         "created_at": challenge_run["created_at"],
+        "publication_state": challenge_run["publication_state"],
         "placements": [dict(placement) for placement in placements],
     }
 
@@ -1104,6 +1125,73 @@ def load_recent_challenge_dates(
     return [row[0] for row in reversed(rows)]
 
 
+def list_challenge_runs(database_path=DATABASE_PATH):
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, challenge_date, created_at, publication_state
+            FROM challenge_runs
+            ORDER BY challenge_date
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+    return [dict(row) for row in rows]
+
+
+def set_challenge_publication_state(
+    challenge_date,
+    publication_state,
+    database_path=DATABASE_PATH,
+):
+    if publication_state not in {"draft", "approved"}:
+        raise ValueError("publication_state must be 'draft' or 'approved'.")
+    normalized_date = _parse_challenge_date(challenge_date).isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE challenge_runs
+            SET publication_state = ?
+            WHERE challenge_date = ?
+              AND publication_state = 'draft'
+            """,
+            (publication_state, normalized_date),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return cursor.rowcount > 0
+
+
+def delete_draft_challenge(challenge_date, database_path=DATABASE_PATH):
+    normalized_date = _parse_challenge_date(challenge_date).isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    try:
+        cursor = connection.execute(
+            """
+            DELETE FROM challenge_runs
+            WHERE challenge_date = ? AND publication_state = 'draft'
+            """,
+            (normalized_date,),
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return cursor.rowcount > 0
+
+
 def load_recent_matchup_pairs(
     challenge_date,
     recent_days,
@@ -1135,6 +1223,7 @@ def record_challenge(
     challenge_date,
     database_path=DATABASE_PATH,
     created_at=None,
+    publication_state="approved",
 ):
     if len(challenge) != 4 or any(
         len(category.get("anime", [])) != 6 for category in challenge
@@ -1142,6 +1231,9 @@ def record_challenge(
         raise ValueError(
             "A complete challenge must contain four categories with six anime each."
         )
+
+    if publication_state not in {"draft", "approved"}:
+        raise ValueError("publication_state must be 'draft' or 'approved'.")
 
     challenge_date = _parse_challenge_date(challenge_date).isoformat()
 
@@ -1155,20 +1247,24 @@ def record_challenge(
         if getattr(connection, "is_postgres", False):
             cursor = connection.execute(
                 """
-                INSERT INTO challenge_runs (challenge_date, created_at)
-                VALUES (?, ?)
+                INSERT INTO challenge_runs (
+                    challenge_date, created_at, publication_state
+                )
+                VALUES (?, ?, ?)
                 RETURNING id
                 """,
-                (challenge_date, created_at),
+                (challenge_date, created_at, publication_state),
             )
             challenge_id = cursor.fetchone()[0]
         else:
             cursor = connection.execute(
                 """
-                INSERT INTO challenge_runs (challenge_date, created_at)
-                VALUES (?, ?)
+                INSERT INTO challenge_runs (
+                    challenge_date, created_at, publication_state
+                )
+                VALUES (?, ?, ?)
                 """,
-                (challenge_date, created_at),
+                (challenge_date, created_at, publication_state),
             )
             challenge_id = cursor.lastrowid
 
@@ -1506,6 +1602,7 @@ def load_month_archive(
                 AND player_results.player_id = ?
             WHERE challenge_runs.challenge_date >= ?
                 AND challenge_runs.challenge_date < ?
+                AND challenge_runs.publication_state = 'approved'
             ORDER BY challenge_runs.challenge_date
             """,
             (player_id, str(first_date), str(next_month_date)),

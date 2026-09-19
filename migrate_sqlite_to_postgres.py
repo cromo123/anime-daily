@@ -29,7 +29,9 @@ TABLE_COLUMNS = {
     "anime_relations": ("source_mal_id", "target_mal_id", "relation_type"),
     "catalog_ingestion_failures": ("mal_id", "title", "stage", "reason", "updated_at"),
     "ingestion_state": ("key", "value"),
-    "challenge_runs": ("id", "challenge_date", "created_at"),
+    "challenge_runs": (
+        "id", "challenge_date", "created_at", "publication_state"
+    ),
     "challenge_anime": ("challenge_id", "category", "position", "mal_id"),
     "matchup_history": (
         "challenge_id", "category", "anime_a_id", "anime_b_id", "challenge_date",

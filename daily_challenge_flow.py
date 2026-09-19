@@ -46,11 +46,12 @@ class AnimeDailyFlowState(BaseModel):
     challenge_id: int | None = None
     status: Literal["existing", "newly_generated"] | None = None
     playtest: bool = False
+    publication_state: Literal["draft", "approved"] = "approved"
 
 
 class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
     @classmethod
-    def for_date(cls, challenge_date=None):
+    def for_date(cls, challenge_date=None, publication_state="approved"):
         """Create a flow for today or an explicit YYYY-MM-DD date."""
         target_date = (
             date.today()
@@ -59,7 +60,8 @@ class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
         )
         return cls(
             initial_state=AnimeDailyFlowState(
-                challenge_date=target_date.isoformat()
+                challenge_date=target_date.isoformat(),
+                publication_state=publication_state,
             ),
             suppress_flow_events=True,
         )
@@ -79,11 +81,15 @@ class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
         if self.state.playtest:
             return "challenge_checked"
 
-        stored_challenge = load_stored_challenge(self.state.challenge_date)
+        stored_challenge = load_stored_challenge(
+            self.state.challenge_date,
+            include_drafts=self.state.publication_state == "draft",
+        )
         if stored_challenge is not None:
             self.state.stored_challenge = stored_challenge
             self.state.challenge_id = load_challenge_record(
-                self.state.challenge_date
+                self.state.challenge_date,
+                include_drafts=self.state.publication_state == "draft",
             )["id"]
             self.state.status = "existing"
 
@@ -239,21 +245,29 @@ class DailyChallengeFlow(Flow[AnimeDailyFlowState]):
             challenge_id = record_challenge(
                 selected_challenge,
                 self.state.challenge_date,
+                publication_state=self.state.publication_state,
             )
         except sqlite3.IntegrityError:
             # Another process may have stored this date during curation.
-            stored_challenge = load_stored_challenge(self.state.challenge_date)
+            stored_challenge = load_stored_challenge(
+                self.state.challenge_date,
+                include_drafts=self.state.publication_state == "draft",
+            )
             if stored_challenge is None:
                 raise
             self.state.stored_challenge = stored_challenge
             self.state.challenge_id = load_challenge_record(
-                self.state.challenge_date
+                self.state.challenge_date,
+                include_drafts=self.state.publication_state == "draft",
             )["id"]
             self.state.status = "existing"
             print("Another process stored this date first; using its challenge.")
             return stored_challenge
 
-        stored_challenge = load_stored_challenge(self.state.challenge_date)
+        stored_challenge = load_stored_challenge(
+            self.state.challenge_date,
+            include_drafts=self.state.publication_state == "draft",
+        )
         if stored_challenge is None:
             raise RuntimeError("The recorded challenge could not be reloaded.")
 
