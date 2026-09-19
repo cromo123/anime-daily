@@ -567,7 +567,7 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
         if anime_id not in anime_cache:
             anime_cache[anime_id] = connection.execute(
                 """
-                SELECT mal_id, title, image_url, relations_fetched
+                SELECT mal_id, title, image_url, type, relations_fetched
                 FROM anime
                 WHERE mal_id = ?
                 """,
@@ -640,7 +640,18 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
                     if not earlier_ids
                 ]
 
-                if len(first_entries) == 1:
+                episodic_ids = {
+                    member_id
+                    for member_id in component
+                    if get_anime(member_id)["type"] in EPISODIC_MEDIA_TYPES
+                }
+                episodic_first_entries = [
+                    member_id
+                    for member_id in episodic_ids
+                    if not (predecessors[member_id] & episodic_ids)
+                ]
+
+                if len(episodic_first_entries) == 1:
                     remaining_predecessors = {
                         member_id: len(earlier_ids)
                         for member_id, earlier_ids in predecessors.items()
@@ -659,7 +670,7 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
                                 ready.append(later_id)
 
                     if processed == len(component):
-                        first_anime = get_anime(first_entries[0])
+                        first_anime = get_anime(episodic_first_entries[0])
                         root = {
                             "mal_id": first_anime["mal_id"],
                             "title": first_anime["title"],
@@ -1396,6 +1407,76 @@ def load_player_answers(player_id, challenge_id, database_path=DATABASE_PATH):
     finally:
         connection.close()
     return [dict(row) for row in rows]
+
+
+def load_comparison_answer_stats(challenge_id, database_path=DATABASE_PATH):
+    """Return anonymized official-answer aggregates for one challenge."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute(
+            """
+            SELECT category, comparison_position,
+                   COUNT(*) AS total_answers,
+                   SUM(correct) AS correct_answers
+            FROM player_answers
+            WHERE challenge_id = ?
+            GROUP BY category, comparison_position
+            ORDER BY category, comparison_position
+            """,
+            (challenge_id,),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    stats = []
+    for row in rows:
+        total = int(row["total_answers"])
+        correct = int(row["correct_answers"] or 0)
+        stats.append(
+            {
+                "category": row["category"],
+                "comparison_position": row["comparison_position"],
+                "total_answers": total,
+                "correct_answers": correct,
+                "percentage": round(correct / total * 100, 1) if total else None,
+            }
+        )
+    return stats
+
+
+def load_player_result_standing(player_id, challenge_id, score, database_path=DATABASE_PATH):
+    """Return a deterministic top-percent standing among official completions."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            """
+            SELECT COUNT(*) AS completed_players,
+                   SUM(CASE WHEN score > ? THEN 1 ELSE 0 END) AS higher_scores
+            FROM player_results
+            WHERE challenge_id = ?
+            """,
+            (score, challenge_id),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    completed_players = int(row["completed_players"] or 0)
+    higher_scores = int(row["higher_scores"] or 0)
+    rank = 1 + higher_scores
+    top_percent = (
+        max(1, round(rank / completed_players * 100))
+        if completed_players
+        else None
+    )
+    return {
+        "completed_players": completed_players,
+        "rank": rank if completed_players else None,
+        "top_percent": top_percent,
+    }
 
 
 def load_month_archive(

@@ -23,9 +23,11 @@ from database import (
     DATABASE_PATH,
     ensure_player,
     load_challenge_record,
+    load_comparison_answer_stats,
     load_month_archive,
     load_player_results,
     load_player_answers,
+    load_player_result_standing,
     record_player_answer,
     record_player_result,
 )
@@ -117,11 +119,13 @@ async def anonymous_player_identity(request: Request, call_next):
     return response
 
 
-def current_challenge_date():
+def current_challenge_date(local_date=None):
+    if local_date is not None:
+        return parse_challenge_date(local_date, allow_future=True).isoformat()
     return date.today().isoformat()
 
 
-def parse_challenge_date(challenge_date):
+def parse_challenge_date(challenge_date, allow_future=False):
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", challenge_date) is None:
         raise HTTPException(
             status_code=400,
@@ -136,7 +140,7 @@ def parse_challenge_date(challenge_date):
             detail="challenge date must use YYYY-MM-DD format.",
         ) from error
 
-    if requested_date > date.today():
+    if not allow_future and requested_date > date.today():
         raise HTTPException(
             status_code=400,
             detail="Future challenges are not available.",
@@ -225,7 +229,22 @@ def evaluate_answer_for_date(requested_date, answer, player_id=None):
         raise HTTPException(status_code=500, detail=str(error)) from error
 
     if existing is not None:
-        return {"challenge_date": challenge_date, **result}
+        stats = load_comparison_answer_stats(
+            challenge_record["id"], app.state.database_path
+        )
+        return {
+            "challenge_date": challenge_date,
+            **result,
+            "comparison_stats": next(
+                (
+                    stat
+                    for stat in stats
+                    if stat["category"] == answer.category
+                    and stat["comparison_position"] == answer.comparison_position
+                ),
+                None,
+            ),
+        }
 
     if player_id is not None:
         record_player_answer(
@@ -238,16 +257,36 @@ def evaluate_answer_for_date(requested_date, answer, player_id=None):
             result["correct"],
             app.state.database_path,
         )
-    return {"challenge_date": challenge_date, **result}
+    stats = load_comparison_answer_stats(
+        challenge_record["id"], app.state.database_path
+    ) if challenge_record is not None else []
+    return {
+        "challenge_date": challenge_date,
+        **result,
+        "comparison_stats": next(
+            (
+                stat
+                for stat in stats
+                if stat["category"] == answer.category
+                and stat["comparison_position"] == answer.comparison_position
+            ),
+            None,
+        ),
+    }
 
 
 def challenge_with_progress(request, requested_date, challenge):
     payload = serialize_public_challenge(
         requested_date, challenge, app.state.database_path
     )
-    if getattr(request.state, "player_id", None) is None:
-        return payload
     record = load_challenge_record(requested_date.isoformat(), app.state.database_path)
+    payload["comparison_stats"] = (
+        load_comparison_answer_stats(record["id"], app.state.database_path)
+        if record is not None
+        else []
+    )
+    if getattr(request.state, "player_id", None) is None or record is None:
+        return payload
     rows = load_player_answers(request.state.player_id, record["id"], app.state.database_path)
     answers = []
     for row in rows:
@@ -287,8 +326,12 @@ def health():
 
 
 @app.get("/challenge/today")
-def get_today_challenge(request: Request):
-    requested_date = date.today()
+def get_today_challenge(request: Request, local_date: str | None = None):
+    requested_date = (
+        parse_challenge_date(local_date, allow_future=True)
+        if local_date is not None
+        else date.today()
+    )
     challenge = load_challenge_for_api(requested_date)
     return challenge_with_progress(request, requested_date, challenge)
 
@@ -301,13 +344,22 @@ def get_dated_challenge(challenge_date: str):
 
 
 @app.post("/challenge/today/answer")
-def answer_today_comparison(request: Request, answer: AnswerRequest):
-    return evaluate_answer_for_date(date.today(), answer, request.state.player_id)
+def answer_today_comparison(
+    request: Request,
+    answer: AnswerRequest,
+    local_date: str | None = None,
+):
+    requested_date = (
+        parse_challenge_date(local_date, allow_future=True)
+        if local_date is not None
+        else date.today()
+    )
+    return evaluate_answer_for_date(requested_date, answer, request.state.player_id)
 
 
 @app.post("/challenge/{challenge_date}/answer")
 def answer_dated_comparison(challenge_date: str, request: Request, answer: AnswerRequest):
-    requested_date = parse_challenge_date(challenge_date)
+    requested_date = parse_challenge_date(challenge_date, allow_future=True)
     return evaluate_answer_for_date(requested_date, answer, request.state.player_id)
 
 
@@ -317,7 +369,7 @@ def complete_challenge(
     completion: CompletionRequest,
     request: Request,
 ):
-    normalized_date = parse_challenge_date(challenge_date).isoformat()
+    normalized_date = parse_challenge_date(challenge_date, allow_future=True).isoformat()
 
     try:
         challenge = load_stored_challenge(
@@ -353,6 +405,12 @@ def complete_challenge(
     )
     official_score = official_result["score"]
     first_completion = official_result["first_completion"]
+    standing = load_player_result_standing(
+        request.state.player_id,
+        challenge_record["id"],
+        official_score,
+        app.state.database_path,
+    )
 
     return {
         "challenge_date": normalized_date,
@@ -365,6 +423,10 @@ def complete_challenge(
         "replay": not first_completion,
         "original_official_score": None if first_completion else official_score,
         "completed_at": official_result["completed_at"],
+        **standing,
+        "comparison_stats": load_comparison_answer_stats(
+            challenge_record["id"], app.state.database_path
+        ),
     }
 
 
@@ -392,7 +454,12 @@ def player_history(request: Request):
 
 
 @app.get("/archive")
-def archive_month(year: int, month: int, request: Request):
+def archive_month(
+    year: int,
+    month: int,
+    request: Request,
+    local_date: str | None = None,
+):
     if year < 1 or year > 9999 or month < 1 or month > 12:
         raise HTTPException(status_code=400, detail="Invalid archive month.")
 
@@ -417,7 +484,7 @@ def archive_month(year: int, month: int, request: Request):
         "month": month,
         "month_name": month_name[month],
         "days_in_month": monthrange(year, month)[1],
-        "today": current_challenge_date(),
+        "today": current_challenge_date(local_date),
         "challenges": [
             {
                 "challenge_date": entry["challenge_date"],

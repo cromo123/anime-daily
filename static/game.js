@@ -23,6 +23,7 @@ const state = {
   revealedMetrics: new Map(),
   selections: [],
   reviewEntries: [],
+  comparisonStats: [],
   runSequence: 0,
   completion: null,
   challengeRequestDate: "today",
@@ -78,6 +79,7 @@ const elements = {
   loadErrorMessage: document.querySelector("#load-error-message"),
   finalScore: document.querySelector("#final-score"),
   finalPercentage: document.querySelector("#final-percentage"),
+  finalStanding: document.querySelector("#final-standing"),
   resultsCopy: document.querySelector("#results-copy"),
   resultsEyebrow: document.querySelector("#results-eyebrow"),
   resultsTitle: document.querySelector("#results-title"),
@@ -366,10 +368,10 @@ async function resyncOfficialProgress() {
   }
 
   try {
-    const response = await fetch("/challenge/today", {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
+    const response = await fetch(
+      `/challenge/today?local_date=${encodeURIComponent(localDateString())}`,
+      { headers: { Accept: "application/json" }, cache: "no-store" },
+    );
     const authoritative = await readJsonResponse(response);
     const today = localDateString();
     const localProgress = {
@@ -439,7 +441,7 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
     } else {
       const challengePath =
         challengeDate === "today"
-          ? "/challenge/today"
+          ? `/challenge/today?local_date=${encodeURIComponent(localDateString())}`
           : `/challenge/${encodeURIComponent(challengeDate)}`;
       response = await fetch(challengePath, {
         headers: { Accept: "application/json" },
@@ -461,6 +463,7 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
       state.todayChallenge = challenge;
     }
     state.challenge = challenge;
+    state.comparisonStats = challenge.comparison_stats || [];
     state.playingArchivedChallenge = !PLAYTEST_MODE &&
       challenge.challenge_date !== localDateString();
     state.officialAttempt = !PLAYTEST_MODE;
@@ -770,6 +773,13 @@ function updateRoundStatus() {
   elements.roundScoreCount.textContent = String(state.roundScore);
 }
 
+function comparisonStat(category, position) {
+  return state.comparisonStats.find(
+    (stat) =>
+      stat.category === category && stat.comparison_position === position,
+  );
+}
+
 function renderComparison() {
   const animePair = currentAnimePair();
 
@@ -839,6 +849,18 @@ async function submitAnswer(selectedMalId) {
         .map((anime) => anime.mal_id),
     );
     state.answer = answer;
+    if (answer.comparison_stats) {
+      state.comparisonStats = [
+        ...state.comparisonStats.filter(
+          (stat) =>
+            !(
+              stat.category === answer.category &&
+              stat.comparison_position === answer.comparison_position
+            ),
+        ),
+        answer.comparison_stats,
+      ];
+    }
     state.revealPhase = "suspense";
     state.selections.push({
       category: currentRound().name,
@@ -950,6 +972,7 @@ function showResults(completion) {
       state.totalScore / TOTAL_COMPARISONS * 100,
       2,
     )}% correct`;
+    elements.finalStanding.textContent = "Practice results are not ranked";
     elements.resultsCopy.textContent =
       "Practice only. This playtest does not change your daily results.";
     elements.resultsEyebrow.textContent = "PLAYTEST COMPLETE";
@@ -968,6 +991,10 @@ function showResults(completion) {
     completion.verified_percentage,
     2,
   )}% correct`;
+  state.comparisonStats = completion.comparison_stats || state.comparisonStats;
+  elements.finalStanding.textContent = completion.top_percent
+    ? `Top ${completion.top_percent}% of players`
+    : "Standing unavailable until more players complete this challenge";
 
   if (completion.replay) {
     elements.resultsCopy.textContent =
@@ -1063,6 +1090,15 @@ function openReview() {
         ),
       );
       item.append(status, pair);
+      const stat = comparisonStat(entry.category, entry.position);
+      const statText = document.createElement("p");
+      statText.className = "review-stats";
+      statText.textContent = stat
+        ? stat.total_answers
+          ? `${formatNumber(stat.percentage, 1)}% of players got this right`
+          : "No player data yet"
+        : "No player data yet";
+      item.append(statText);
       section.append(item);
     }
     sections.push(section);
@@ -1218,9 +1254,12 @@ async function loadArchive(year = state.archiveYear, month = state.archiveMonth)
   showScreen(elements.archiveScreen);
 
   try {
-    const response = await fetch(`/archive?year=${year}&month=${month}`, {
+    const response = await fetch(
+      `/archive?year=${year}&month=${month}&local_date=${encodeURIComponent(localDateString())}`,
+      {
       headers: { Accept: "application/json" },
-    });
+      },
+    );
     const archive = await readJsonResponse(response);
     state.archiveData = archive;
     renderArchiveCalendar(archive);
