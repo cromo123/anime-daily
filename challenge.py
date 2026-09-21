@@ -1,5 +1,4 @@
 import random
-import re
 import sqlite3
 from datetime import date
 
@@ -12,6 +11,11 @@ from database import (
     load_series_display_roots,
     normalize_matchup_pair,
     record_challenge,
+)
+from fixture_safety import (
+    KNOWN_SYNTHETIC_MAL_IDS,
+    SYNTHETIC_TITLE_PATTERN,
+    is_known_synthetic_fixture,
 )
 
 
@@ -84,21 +88,9 @@ class PublicChallengeValidationError(ValueError):
     """A challenge is not safe to publish through the public API."""
 
 
-SYNTHETIC_TITLE_PATTERN = re.compile(
-    r"^(?:Higher Score|More Popular|More Episodes|More Recent)\d+$"
-)
-KNOWN_SYNTHETIC_MAL_IDS = frozenset(
-    list(range(991000, 991006))
-    + list(range(991010, 991016))
-    + list(range(991020, 991026))
-    + list(range(991030, 991036))
-)
-
-
 def contains_known_synthetic_fixture(challenge):
     return any(
-        anime.get("mal_id") in KNOWN_SYNTHETIC_MAL_IDS
-        or SYNTHETIC_TITLE_PATTERN.fullmatch(anime.get("title", ""))
+        is_known_synthetic_fixture(anime.get("mal_id"), anime.get("title"))
         for category in challenge
         for anime in category.get("anime", [])
     )
