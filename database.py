@@ -1192,27 +1192,31 @@ def delete_draft_challenge(challenge_date, database_path=DATABASE_PATH):
     return cursor.rowcount > 0
 
 
+def _load_challenge_player_activity_from_connection(connection, challenge_id):
+    connection.row_factory = sqlite3.Row
+    row = connection.execute(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM player_answers WHERE challenge_id = ?) AS answer_rows,
+            (SELECT COUNT(*) FROM player_results WHERE challenge_id = ?) AS result_rows,
+            (SELECT COUNT(DISTINCT player_id) FROM player_answers
+             WHERE challenge_id = ?) AS answer_players,
+            (SELECT COUNT(DISTINCT player_id) FROM player_results
+             WHERE challenge_id = ?) AS result_players
+        """,
+        (challenge_id, challenge_id, challenge_id, challenge_id),
+    ).fetchone()
+    return dict(row)
+
+
 def load_challenge_player_activity(challenge_id, database_path=DATABASE_PATH):
-    """Return official answer/result counts for a challenge before repair."""
+    """Return official answer/result counts for a challenge."""
     initialize_database(database_path)
     connection = _connect_database(database_path)
-    connection.row_factory = sqlite3.Row
     try:
-        row = connection.execute(
-            """
-            SELECT
-                (SELECT COUNT(*) FROM player_answers WHERE challenge_id = ?) AS answer_rows,
-                (SELECT COUNT(*) FROM player_results WHERE challenge_id = ?) AS result_rows,
-                (SELECT COUNT(DISTINCT player_id) FROM player_answers
-                 WHERE challenge_id = ?) AS answer_players,
-                (SELECT COUNT(DISTINCT player_id) FROM player_results
-                 WHERE challenge_id = ?) AS result_players
-            """,
-            (challenge_id, challenge_id, challenge_id, challenge_id),
-        ).fetchone()
+        return _load_challenge_player_activity_from_connection(connection, challenge_id)
     finally:
         connection.close()
-    return dict(row)
 
 
 def delete_challenge(
@@ -1239,7 +1243,9 @@ def delete_challenge(
         if record["publication_state"] == "approved" and not allow_approved:
             raise ValueError("Approved challenges require explicit repair authorization.")
 
-        activity = load_challenge_player_activity(record["id"], database_path)
+        activity = _load_challenge_player_activity_from_connection(
+            connection, record["id"]
+        )
         if activity["answer_rows"] or activity["result_rows"]:
             raise ValueError(
                 "Challenge has official player answers/results; manual intervention is required."
