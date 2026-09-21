@@ -880,6 +880,13 @@ button {
   pointer-events: none;
 }
 
+.calendar-day.is-before-public-history {
+  justify-content: flex-start;
+  color: var(--muted);
+  background: transparent;
+  pointer-events: none;
+}
+
 .calendar-legend {
   flex-wrap: wrap;
   gap: 1rem;

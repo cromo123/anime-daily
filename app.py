@@ -49,7 +49,7 @@ DEV_MODE = os.getenv("ANIME_DAILY_DEV_MODE", "").lower() in {
     "true",
     "yes",
 }
-PUBLIC_ARCHIVE_CUTOFF = date(2026, 9, 20)
+PUBLIC_ARCHIVE_CUTOFF = date(2026, 9, 19)
 
 app = FastAPI(title="AniMoredle")
 app.state.database_path = DATABASE_PATH
@@ -152,6 +152,12 @@ def parse_challenge_date(challenge_date, allow_future=False):
     return requested_date
 
 
+def require_public_history_date(requested_date):
+    """Keep pre-launch challenge rows available internally, but never publicly."""
+    if requested_date < PUBLIC_ARCHIVE_CUTOFF:
+        raise HTTPException(status_code=404, detail="Challenge not found.")
+
+
 def load_challenge_for_api(requested_date):
     challenge_date = requested_date.isoformat()
 
@@ -189,10 +195,7 @@ def evaluate_answer_for_date(requested_date, answer, player_id=None):
     challenge_date = requested_date.isoformat()
 
     try:
-        challenge = load_stored_challenge(
-            challenge_date,
-            app.state.database_path,
-        )
+        challenge = load_challenge_for_api(requested_date)
         challenge_record = load_challenge_record(
             challenge_date,
             app.state.database_path,
@@ -287,6 +290,7 @@ def challenge_with_progress(request, requested_date, challenge):
         if record is not None
         else []
     )
+    payload["public_history_start"] = PUBLIC_ARCHIVE_CUTOFF.isoformat()
     if getattr(request.state, "player_id", None) is None or record is None:
         return payload
     rows = load_player_answers(request.state.player_id, record["id"], app.state.database_path)
@@ -334,6 +338,7 @@ def get_today_challenge(request: Request, local_date: str | None = None):
         if local_date is not None
         else date.today()
     )
+    require_public_history_date(requested_date)
     challenge = load_challenge_for_api(requested_date)
     return challenge_with_progress(request, requested_date, challenge)
 
@@ -341,8 +346,7 @@ def get_today_challenge(request: Request, local_date: str | None = None):
 @app.get("/challenge/{challenge_date}")
 def get_dated_challenge(challenge_date: str, request: Request):
     requested_date = parse_challenge_date(challenge_date)
-    if requested_date < PUBLIC_ARCHIVE_CUTOFF:
-        raise HTTPException(status_code=404, detail="Challenge not found.")
+    require_public_history_date(requested_date)
     challenge = load_challenge_for_api(requested_date)
     return challenge_with_progress(request, requested_date, challenge)
 
@@ -358,12 +362,14 @@ def answer_today_comparison(
         if local_date is not None
         else date.today()
     )
+    require_public_history_date(requested_date)
     return evaluate_answer_for_date(requested_date, answer, request.state.player_id)
 
 
 @app.post("/challenge/{challenge_date}/answer")
 def answer_dated_comparison(challenge_date: str, request: Request, answer: AnswerRequest):
     requested_date = parse_challenge_date(challenge_date, allow_future=True)
+    require_public_history_date(requested_date)
     return evaluate_answer_for_date(requested_date, answer, request.state.player_id)
 
 
@@ -373,13 +379,12 @@ def complete_challenge(
     completion: CompletionRequest,
     request: Request,
 ):
-    normalized_date = parse_challenge_date(challenge_date, allow_future=True).isoformat()
+    requested_date = parse_challenge_date(challenge_date, allow_future=True)
+    require_public_history_date(requested_date)
+    normalized_date = requested_date.isoformat()
 
     try:
-        challenge = load_stored_challenge(
-            normalized_date,
-            app.state.database_path,
-        )
+        challenge = load_challenge_for_api(requested_date)
         challenge_record = load_challenge_record(
             normalized_date,
             app.state.database_path,
@@ -453,6 +458,7 @@ def player_history(request: Request):
                 "completed_at": result["completed_at"],
             }
             for result in results
+            if date.fromisoformat(result["challenge_date"]) >= PUBLIC_ARCHIVE_CUTOFF
         ]
     }
 
@@ -490,6 +496,7 @@ def archive_month(
         "month_name": month_name[month],
         "days_in_month": monthrange(year, month)[1],
         "today": current_challenge_date(local_date),
+        "public_history_start": PUBLIC_ARCHIVE_CUTOFF.isoformat(),
         "challenges": [
             {
                 "challenge_date": entry["challenge_date"],

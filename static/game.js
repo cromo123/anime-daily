@@ -8,10 +8,16 @@ const REVEAL_DURATION_MS = 2000;
 const RESULT_PAUSE_MS = 700;
 const PLAYTEST_MODE =
   new URLSearchParams(window.location.search).get("playtest") === "1";
+const {
+  applyLoadedChallenge,
+  createRequestGate,
+  findResumePosition,
+  isPublicHistoryDate,
+  responseMatchesRequest,
+} = window.AniMoredleChallengeState;
 
 const state = {
   challenge: null,
-  todayChallenge: null,
   roundIndex: 0,
   comparisonIndex: 0,
   totalScore: 0,
@@ -36,9 +42,11 @@ const state = {
   visibleScreen: null,
   lastGameplayScreen: null,
   officialAttempt: false,
+  publicHistoryStart: null,
 };
 
 let introSequence = 0;
+const navigationRequests = createRequestGate();
 let audioContext = null;
 const feedbackSounds = new Set();
 const countingSounds = new Set();
@@ -257,7 +265,18 @@ function setActiveNavigation(activeView) {
 }
 
 function restoreTodayView() {
-  state.challenge = state.todayChallenge;
+  const today = localDateString();
+  if (
+    !state.challenge ||
+    (!PLAYTEST_MODE && (
+      state.playingArchivedChallenge || state.challenge.challenge_date !== today
+    ))
+  ) {
+    loadChallenge(PLAYTEST_MODE ? "playtest" : "today");
+    return;
+  }
+
+  navigationRequests.begin();
   state.officialAttempt = !PLAYTEST_MODE;
   state.playingArchivedChallenge = false;
   elements.challengeLabel.textContent = PLAYTEST_MODE ? "PLAYTEST" : "Daily challenge";
@@ -314,31 +333,12 @@ function restoreOfficialProgress(progress) {
     });
   }
   state.totalScore = progress.score || 0;
-  const answeredKeys = new Set(
-    state.selections.map(
-      (selection) => `${selection.category}:${selection.comparison_position}`,
-    ),
-  );
-  for (let roundIndex = 0; roundIndex < state.challenge.categories.length; roundIndex += 1) {
-    const category = state.challenge.categories[roundIndex];
-    for (let position = 1; position < category.anime.length; position += 1) {
-      if (!answeredKeys.has(`${category.name}:${position}`)) {
-        state.roundIndex = roundIndex;
-        state.comparisonIndex = position - 1;
-        state.roundScore = state.selections.filter(
-          (selection) => selection.category === category.name,
-        ).reduce((score, selection) => {
-          const answer = progress.answers.find(
-            (item) => item.category === selection.category &&
-              item.comparison_position === selection.comparison_position,
-          );
-          return score + (answer?.correct ? 1 : 0);
-        }, 0);
-        return false;
-      }
-    }
-  }
-  return true;
+  const resume = findResumePosition(state.challenge, progress.answers);
+  if (resume.complete) return true;
+  state.roundIndex = resume.roundIndex;
+  state.comparisonIndex = resume.comparisonIndex;
+  state.roundScore = resume.roundScore;
+  return false;
 }
 
 function progressSignature(progress) {
@@ -363,9 +363,17 @@ function challengeSignature(challenge) {
 }
 
 async function resyncOfficialProgress() {
-  if (PLAYTEST_MODE) {
+  if (
+    PLAYTEST_MODE ||
+    !state.challenge ||
+    state.visibleScreen === elements.archiveScreen ||
+    state.visibleScreen === elements.archiveResultScreen ||
+    state.playingArchivedChallenge ||
+    state.challenge.challenge_date !== localDateString()
+  ) {
     return;
   }
+  const requestId = navigationRequests.begin();
 
   try {
     const response = await fetch(
@@ -373,15 +381,13 @@ async function resyncOfficialProgress() {
       { headers: { Accept: "application/json" }, cache: "no-store" },
     );
     const authoritative = await readJsonResponse(response);
+    if (!navigationRequests.isCurrent(requestId)) return;
     const today = localDateString();
     const localProgress = {
       answers: state.selections.map((selection) => selection),
     };
     const serverProgress = authoritative.progress || {};
     if (
-      !state.todayChallenge ||
-      state.playingArchivedChallenge ||
-      state.challenge?.challenge_date !== today ||
       authoritative.challenge_date !== today ||
       challengeSignature(state.challenge) !== challengeSignature(authoritative) ||
       progressSignature(localProgress) !== progressSignature(serverProgress) ||
@@ -390,6 +396,7 @@ async function resyncOfficialProgress() {
       await loadChallenge("today");
     }
   } catch {
+    if (!navigationRequests.isCurrent(requestId)) return;
     if (!state.challenge || state.challenge.challenge_date !== localDateString()) {
       elements.loadErrorMessage.textContent =
         "Today's official challenge is unavailable right now.";
@@ -412,12 +419,21 @@ async function readJsonResponse(response) {
 async function loadChallenge(challengeDate = "today", generateNewPlaytest = false) {
   cancelPendingFeedback();
   const sequence = ++introSequence;
+  const requestId = navigationRequests.begin();
   state.runSequence += 1;
   state.challengeRequestDate = challengeDate;
   state.retryGeneratePlaytest = generateNewPlaytest;
   showScreen(elements.loadingScreen);
 
   try {
+    if (
+      !PLAYTEST_MODE &&
+      challengeDate !== "today" &&
+      !isPublicHistoryDate(challengeDate, state.publicHistoryStart)
+    ) {
+      throw new Error("This challenge is not part of the public archive.");
+    }
+
     let response;
     if (PLAYTEST_MODE) {
       response = await fetch(
@@ -449,25 +465,34 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
     }
     const challenge = await readJsonResponse(response);
 
-    if (sequence !== introSequence) return;
+    if (sequence !== introSequence || !navigationRequests.isCurrent(requestId)) return;
 
     if (
       !validateChallenge(challenge) ||
-      (PLAYTEST_MODE && !challenge.playtest_id)
+      !responseMatchesRequest(
+        challenge,
+        challengeDate,
+        localDateString(),
+        PLAYTEST_MODE,
+      )
     ) {
       throw new Error("The daily challenge data is incomplete.");
     }
 
-    const isTodayChallenge = PLAYTEST_MODE || challenge.challenge_date === localDateString();
-    if (isTodayChallenge) {
-      state.todayChallenge = challenge;
-    }
-    state.challenge = challenge;
-    state.comparisonStats = challenge.comparison_stats || [];
-    state.playingArchivedChallenge = !PLAYTEST_MODE &&
-      challenge.challenge_date !== localDateString();
-    state.officialAttempt = !PLAYTEST_MODE;
-    resetGame();
+    cancelPendingFeedback();
+    state.runSequence += 1;
+    elements.reviewList.replaceChildren();
+    elements.retryCompletionButton.hidden = true;
+    const mode = PLAYTEST_MODE
+      ? "playtest"
+      : challengeDate === "today"
+        ? "today"
+        : "archive";
+    applyLoadedChallenge(state, challenge, {
+      requestDate: challengeDate,
+      mode,
+      officialAttempt: !PLAYTEST_MODE,
+    });
     const progressComplete = !PLAYTEST_MODE && restoreOfficialProgress(challenge.progress);
     elements.challengeDate.textContent = formatDate(challenge.challenge_date);
     if (PLAYTEST_MODE) {
@@ -490,7 +515,7 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
       showRoundIntro();
     }
   } catch (error) {
-    if (sequence !== introSequence) return;
+    if (sequence !== introSequence || !navigationRequests.isCurrent(requestId)) return;
     elements.loadErrorMessage.textContent =
       error.message || "Check your connection and try again.";
     showScreen(elements.errorScreen);
@@ -1184,6 +1209,15 @@ function renderArchiveCalendar(archive) {
 
   for (let day = 1; day <= archive.days_in_month; day += 1) {
     const challengeDate = archiveDateString(archive.year, archive.month, day);
+    if (!isPublicHistoryDate(challengeDate, archive.public_history_start)) {
+      const calendarDate = document.createElement("div");
+      calendarDate.className = "calendar-day is-before-public-history";
+      const dayNumber = document.createElement("strong");
+      dayNumber.textContent = String(day);
+      calendarDate.append(dayNumber);
+      cells.push(calendarDate);
+      continue;
+    }
     const challenge = challengesByDate.get(challengeDate);
     const isFuture = challengeDate > archive.today;
     const dayButton = document.createElement("button");
@@ -1239,6 +1273,7 @@ function renderArchiveCalendar(archive) {
 async function loadArchive(year = state.archiveYear, month = state.archiveMonth) {
   cancelPendingFeedback();
   introSequence += 1;
+  const requestId = navigationRequests.begin();
   state.runSequence += 1;
   state.archiveYear = year;
   state.archiveMonth = month;
@@ -1261,9 +1296,12 @@ async function loadArchive(year = state.archiveYear, month = state.archiveMonth)
       },
     );
     const archive = await readJsonResponse(response);
+    if (!navigationRequests.isCurrent(requestId)) return;
+    state.publicHistoryStart = archive.public_history_start;
     state.archiveData = archive;
     renderArchiveCalendar(archive);
   } catch (error) {
+    if (!navigationRequests.isCurrent(requestId)) return;
     elements.archiveMonthTitle.textContent = "Archive unavailable";
     elements.archiveError.textContent =
       error.message || "The challenge archive could not be loaded.";
@@ -1356,8 +1394,13 @@ elements.newPlaytestButton.addEventListener("click", () =>
 );
 elements.todayNavButton.addEventListener("click", () => {
   if (
-    state.todayChallenge &&
-    (PLAYTEST_MODE || state.todayChallenge.challenge_date === localDateString())
+    state.visibleScreen !== elements.archiveScreen &&
+    state.visibleScreen !== elements.archiveResultScreen &&
+    state.challenge &&
+    (PLAYTEST_MODE || (
+      !state.playingArchivedChallenge &&
+      state.challenge.challenge_date === localDateString()
+    ))
   ) {
     restoreTodayView();
     return;
