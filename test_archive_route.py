@@ -12,7 +12,8 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import app as app_module
-from database import DATABASE_PATH
+from challenge import load_stored_challenge
+from database import DATABASE_PATH, record_challenge
 
 
 class ArchiveRouteTests(unittest.TestCase):
@@ -22,6 +23,10 @@ class ArchiveRouteTests(unittest.TestCase):
         )
         self.database_path = Path(self.temporary_directory.name) / "game.db"
         shutil.copyfile(DATABASE_PATH, self.database_path)
+        source_challenge = load_stored_challenge(
+            "2026-09-16", self.database_path
+        )
+        record_challenge(source_challenge, "2026-09-20", self.database_path)
         self.original_database_path = app_module.app.state.database_path
         app_module.app.state.database_path = self.database_path
         self.client = TestClient(app_module.app)
@@ -32,15 +37,15 @@ class ArchiveRouteTests(unittest.TestCase):
         self.temporary_directory.cleanup()
 
     def test_historical_route_loads_progress_and_requires_exact_date(self):
-        response = self.client.get("/challenge/2026-09-16")
+        response = self.client.get("/challenge/2026-09-20")
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["challenge_date"], "2026-09-16")
+        self.assertEqual(payload["challenge_date"], "2026-09-20")
         self.assertIn("progress", payload)
 
         first_category = payload["categories"][0]
         answer = self.client.post(
-            "/challenge/2026-09-16/answer",
+            "/challenge/2026-09-20/answer",
             json={
                 "category": first_category["name"],
                 "comparison_position": 1,
@@ -48,14 +53,14 @@ class ArchiveRouteTests(unittest.TestCase):
             },
         )
         self.assertEqual(answer.status_code, 200)
-        resumed = self.client.get("/challenge/2026-09-16").json()["progress"]
+        resumed = self.client.get("/challenge/2026-09-20").json()["progress"]
         self.assertEqual(len(resumed["answers"]), 1)
         self.assertEqual(
             resumed["next"],
             {"category": first_category["name"], "comparison_position": 2},
         )
         self.assertEqual(
-            self.client.get("/challenge/today?local_date=2026-09-16").status_code,
+            self.client.get("/challenge/today?local_date=2026-09-20").status_code,
             200,
         )
 
@@ -67,15 +72,19 @@ class ArchiveRouteTests(unittest.TestCase):
         with sqlite3.connect(self.database_path) as connection:
             connection.execute(
                 "UPDATE challenge_runs SET publication_state = 'draft' "
-                "WHERE challenge_date = '2026-09-16'"
+                "WHERE challenge_date = '2026-09-20'"
             )
 
         self.assertEqual(
-            self.client.get("/challenge/2026-09-16").status_code,
+            self.client.get("/challenge/2026-09-20").status_code,
             404,
         )
         self.assertEqual(
-            self.client.get("/challenge/today?local_date=2026-09-16").status_code,
+            self.client.get("/challenge/2026-09-19").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get("/challenge/today?local_date=2026-09-20").status_code,
             404,
         )
 

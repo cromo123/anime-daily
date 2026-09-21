@@ -49,6 +49,7 @@ DEV_MODE = os.getenv("ANIME_DAILY_DEV_MODE", "").lower() in {
     "true",
     "yes",
 }
+PUBLIC_ARCHIVE_CUTOFF = date(2026, 9, 20)
 
 app = FastAPI(title="AniMoredle")
 app.state.database_path = DATABASE_PATH
@@ -340,6 +341,8 @@ def get_today_challenge(request: Request, local_date: str | None = None):
 @app.get("/challenge/{challenge_date}")
 def get_dated_challenge(challenge_date: str, request: Request):
     requested_date = parse_challenge_date(challenge_date)
+    if requested_date < PUBLIC_ARCHIVE_CUTOFF:
+        raise HTTPException(status_code=404, detail="Challenge not found.")
     challenge = load_challenge_for_api(requested_date)
     return challenge_with_progress(request, requested_date, challenge)
 
@@ -478,6 +481,7 @@ def archive_month(
         first_date,
         next_month_date,
         app.state.database_path,
+        minimum_date=PUBLIC_ARCHIVE_CUTOFF,
     )
 
     return {

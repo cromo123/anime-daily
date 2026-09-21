@@ -1668,14 +1668,14 @@ def load_month_archive(
     first_date,
     next_month_date,
     database_path=DATABASE_PATH,
+    minimum_date=None,
 ):
     initialize_database(database_path)
     connection = _connect_database(database_path)
     connection.row_factory = sqlite3.Row
 
     try:
-        rows = connection.execute(
-            """
+        query = """
             SELECT
                 challenge_runs.challenge_date,
                 player_results.score AS official_score,
@@ -1691,10 +1691,13 @@ def load_month_archive(
             WHERE challenge_runs.challenge_date >= ?
                 AND challenge_runs.challenge_date < ?
                 AND challenge_runs.publication_state = 'approved'
-            ORDER BY challenge_runs.challenge_date
-            """,
-            (player_id, str(first_date), str(next_month_date)),
-        ).fetchall()
+        """
+        parameters = [player_id, str(first_date), str(next_month_date)]
+        if minimum_date is not None:
+            query += " AND challenge_runs.challenge_date >= ?\n"
+            parameters.append(str(minimum_date))
+        query += " ORDER BY challenge_runs.challenge_date"
+        rows = connection.execute(query, parameters).fetchall()
     finally:
         connection.close()
 
