@@ -1,4 +1,5 @@
 import random
+import re
 import sqlite3
 from datetime import date
 
@@ -77,6 +78,30 @@ TOTAL_QUESTIONS = len(CATEGORY_RULES) * (ANIME_PER_CATEGORY - 1)
 
 class LegacyChallengeError(ValueError):
     """A stored challenge uses an older category format and cannot be played."""
+
+
+class PublicChallengeValidationError(ValueError):
+    """A challenge is not safe to publish through the public API."""
+
+
+SYNTHETIC_TITLE_PATTERN = re.compile(
+    r"^(?:Higher Score|More Popular|More Episodes|More Recent)\d+$"
+)
+KNOWN_SYNTHETIC_MAL_IDS = frozenset(
+    list(range(991000, 991006))
+    + list(range(991010, 991016))
+    + list(range(991020, 991026))
+    + list(range(991030, 991036))
+)
+
+
+def contains_known_synthetic_fixture(challenge):
+    return any(
+        anime.get("mal_id") in KNOWN_SYNTHETIC_MAL_IDS
+        or SYNTHETIC_TITLE_PATTERN.fullmatch(anime.get("title", ""))
+        for category in challenge
+        for anime in category.get("anime", [])
+    )
 
 
 def get_comparison_value(anime, metric):
@@ -744,6 +769,98 @@ def serialize_public_challenge(
         "challenge_date": str(challenge_date),
         "categories": categories,
     }
+
+
+def validate_public_challenge(
+    challenge,
+    challenge_date,
+    database_path=DATABASE_PATH,
+):
+    """Validate the same factual/public invariants used before API serving."""
+    errors = []
+    expected_names = [rule["name"] for rule in CATEGORY_RULES]
+
+    if not isinstance(challenge, list) or len(challenge) != len(CATEGORY_RULES):
+        errors.append("challenge must contain exactly four categories")
+
+    categories_by_name = {
+        category.get("name"): category
+        for category in challenge
+        if isinstance(category, dict)
+    } if isinstance(challenge, list) else {}
+    if list(categories_by_name) != expected_names:
+        errors.append("category order or names do not match the current game")
+
+    catalog = {
+        anime["mal_id"]: anime
+        for anime in load_anime_records(database_path)
+        if anime.get("mal_id") is not None
+    }
+    seen_ids = set()
+
+    for rule in CATEGORY_RULES:
+        category = categories_by_name.get(rule["name"])
+        if category is None:
+            continue
+        anime_order = category.get("anime")
+        if category.get("metric") != rule["metric"]:
+            errors.append(f"{rule['name']} uses the wrong comparison metric")
+        if not isinstance(anime_order, list) or len(anime_order) != ANIME_PER_CATEGORY:
+            errors.append(f"{rule['name']} must contain six anime")
+            continue
+
+        for anime in anime_order:
+            if not isinstance(anime, dict):
+                errors.append(f"{rule['name']} contains an invalid anime record")
+                continue
+            mal_id = anime.get("mal_id")
+            if mal_id in seen_ids:
+                errors.append(f"duplicate MAL ID in challenge: {mal_id}")
+            seen_ids.add(mal_id)
+            if mal_id not in catalog:
+                errors.append(f"MAL ID {mal_id} is missing from the catalog")
+            if mal_id in KNOWN_SYNTHETIC_MAL_IDS:
+                errors.append(f"known synthetic fixture MAL ID: {mal_id}")
+            if SYNTHETIC_TITLE_PATTERN.fullmatch(anime.get("title", "")):
+                errors.append(f"synthetic fixture title: {anime['title']}")
+            if not has_eligible_display_type(anime, rule):
+                errors.append(f"unsupported media type in {rule['name']}")
+            if get_comparison_value(anime, rule["metric"]) is None:
+                errors.append(f"missing {rule['metric']} value in {rule['name']}")
+            if (
+                rule["name"] == "More Popular"
+                and anime.get("popularity_rank") is None
+            ):
+                errors.append("More Popular entries require popularity_rank")
+
+        for anime_a, anime_b in zip(anime_order, anime_order[1:]):
+            value_a = get_comparison_value(anime_a, rule["metric"])
+            value_b = get_comparison_value(anime_b, rule["metric"])
+            if value_a is None or value_b is None or value_a == value_b:
+                errors.append(f"invalid tied/missing matchup in {rule['name']}")
+
+    if errors:
+        raise PublicChallengeValidationError("; ".join(dict.fromkeys(errors)))
+
+    try:
+        public_payload = serialize_public_challenge(
+            challenge_date,
+            challenge,
+            database_path,
+        )
+    except Exception as error:
+        raise PublicChallengeValidationError(
+            f"public serialization failed: {error}"
+        ) from error
+
+    if any(
+        SYNTHETIC_TITLE_PATTERN.fullmatch(anime.get("title", ""))
+        for category in public_payload["categories"]
+        for anime in category["anime"]
+    ):
+        raise PublicChallengeValidationError("public payload contains synthetic fixture data")
+
+    return public_payload
 
 
 def evaluate_category_comparison(category, comparison_position, selected_mal_id):

@@ -3,16 +3,25 @@
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta, timezone
 
-from challenge import load_stored_challenge
+from challenge import (
+    LegacyChallengeError,
+    PublicChallengeValidationError,
+    load_stored_challenge,
+    validate_public_challenge,
+)
 from daily_challenge_flow import DailyChallengeFlow
 from database import (
     DATABASE_PATH,
     delete_draft_challenge,
+    delete_challenge,
     list_challenge_runs,
     load_challenge_record,
+    load_challenge_player_activity,
     load_series_display_roots,
     set_challenge_publication_state,
 )
+
+MAX_REPLENISH_ATTEMPTS = 3
 
 
 def _parse_date(value):
@@ -35,6 +44,57 @@ def _run_draft_generation(challenge_date):
     return record
 
 
+def _validate_stored_date(challenge_date, include_drafts=True):
+    try:
+        challenge = load_stored_challenge(
+            challenge_date.isoformat(),
+            DATABASE_PATH,
+            include_drafts=include_drafts,
+        )
+    except LegacyChallengeError as error:
+        raise PublicChallengeValidationError(str(error)) from error
+    except (RuntimeError, ValueError) as error:
+        raise PublicChallengeValidationError(
+            f"challenge could not be loaded for publication: {error}"
+        ) from error
+    if challenge is None:
+        raise RuntimeError(f"No challenge stored for {challenge_date}.")
+    validate_public_challenge(challenge, challenge_date, DATABASE_PATH)
+    return challenge
+
+
+def _generate_and_approve(challenge_date):
+    last_error = None
+    for attempt in range(1, MAX_REPLENISH_ATTEMPTS + 1):
+        try:
+            _run_draft_generation(challenge_date)
+            _validate_stored_date(challenge_date)
+            if not set_challenge_publication_state(
+                challenge_date.isoformat(), "approved", DATABASE_PATH
+            ):
+                raise RuntimeError("Generated draft was not approved.")
+            return attempt
+        except Exception as error:
+            last_error = error
+            try:
+                draft = load_challenge_record(
+                    challenge_date.isoformat(),
+                    DATABASE_PATH,
+                    include_drafts=True,
+                )
+                if draft is not None and draft["publication_state"] == "draft":
+                    delete_draft_challenge(
+                        challenge_date.isoformat(), DATABASE_PATH
+                    )
+            except Exception as cleanup_error:
+                last_error = RuntimeError(
+                    f"{error}; draft cleanup failed: {cleanup_error}"
+                )
+    raise RuntimeError(
+        f"{MAX_REPLENISH_ATTEMPTS} generation attempts failed: {last_error}"
+    ) from last_error
+
+
 def replenish(days_ahead=7, reference_date=None):
     """Ensure an approved challenge exists for today through the future buffer."""
     if days_ahead < 0:
@@ -52,26 +112,44 @@ def replenish(days_ahead=7, reference_date=None):
         )
 
         if existing is not None and existing["publication_state"] == "approved":
-            print(f"{challenge_date}: already approved")
+            try:
+                _validate_stored_date(challenge_date, include_drafts=False)
+            except PublicChallengeValidationError as error:
+                unresolved.append(challenge_date)
+                print(f"{challenge_date}: approved but invalid: {error}")
+            else:
+                print(f"{challenge_date}: already approved")
             continue
 
         if existing is not None and existing["publication_state"] == "draft":
             try:
+                _validate_stored_date(challenge_date)
                 set_challenge_publication_state(
                     date_text, "approved", DATABASE_PATH
                 )
                 print(f"{challenge_date}: existing draft approved")
+            except PublicChallengeValidationError as error:
+                try:
+                    delete_draft_challenge(date_text, DATABASE_PATH)
+                    attempts = _generate_and_approve(challenge_date)
+                    print(
+                        f"{challenge_date}: invalid draft replaced and approved "
+                        f"(attempt {attempts})"
+                    )
+                except Exception as retry_error:
+                    unresolved.append(challenge_date)
+                    print(
+                        f"{challenge_date}: invalid draft rejected ({error}); "
+                        f"retry failed: {retry_error}"
+                    )
             except Exception as error:
                 unresolved.append(challenge_date)
                 print(f"{challenge_date}: replenishment failed: {error}")
             continue
 
         try:
-            _run_draft_generation(challenge_date)
-            set_challenge_publication_state(
-                date_text, "approved", DATABASE_PATH
-            )
-            print(f"{challenge_date}: generated and approved")
+            attempts = _generate_and_approve(challenge_date)
+            print(f"{challenge_date}: generated and approved (attempt {attempts})")
         except Exception as error:
             # A concurrent invocation may have completed this date while this
             # process was curating it. Re-read the exact date before reporting
@@ -170,12 +248,60 @@ def approve(challenge_date):
     if record is None:
         raise RuntimeError(f"No challenge stored for {challenge_date}.")
     if record["publication_state"] == "approved":
+        _validate_stored_date(challenge_date, include_drafts=False)
         print(f"{challenge_date}: already approved")
         return
+    _validate_stored_date(challenge_date)
     if set_challenge_publication_state(
         challenge_date.isoformat(), "approved", DATABASE_PATH
     ):
         print(f"{challenge_date}: approved")
+
+
+def validate_challenge(challenge_date):
+    record = load_challenge_record(
+        challenge_date.isoformat(), DATABASE_PATH, include_drafts=True
+    )
+    if record is None:
+        raise RuntimeError(f"No challenge stored for {challenge_date}.")
+    try:
+        _validate_stored_date(challenge_date)
+    except PublicChallengeValidationError as error:
+        activity = load_challenge_player_activity(record["id"], DATABASE_PATH)
+        print(f"{challenge_date}: INVALID ({error})")
+        print(
+            "Official activity: "
+            f"{activity['answer_rows']} answers / {activity['result_rows']} results"
+        )
+        return False
+    print(f"{challenge_date}: valid ({record['publication_state']})")
+    return True
+
+
+def repair(challenge_date):
+    record = load_challenge_record(
+        challenge_date.isoformat(), DATABASE_PATH, include_drafts=True
+    )
+    if record is None:
+        raise RuntimeError(f"No challenge stored for {challenge_date}.")
+    try:
+        _validate_stored_date(challenge_date)
+    except PublicChallengeValidationError as error:
+        print(f"{challenge_date}: invalid challenge will be repaired: {error}")
+    else:
+        raise RuntimeError("Refusing to repair a valid challenge.")
+
+    activity = load_challenge_player_activity(record["id"], DATABASE_PATH)
+    if activity["answer_rows"] or activity["result_rows"]:
+        raise RuntimeError(
+            "Refusing repair: official player answers/results exist; "
+            "manual intervention is required."
+        )
+    delete_challenge(
+        challenge_date.isoformat(), DATABASE_PATH, allow_approved=True
+    )
+    attempts = _generate_and_approve(challenge_date)
+    print(f"{challenge_date}: repaired and approved (attempt {attempts})")
 
 
 def regenerate(challenge_date):
@@ -213,7 +339,7 @@ def main():
     )
 
     subparsers.add_parser("list")
-    for name in ("inspect", "approve", "regenerate"):
+    for name in ("inspect", "approve", "regenerate", "validate", "repair"):
         command_parser = subparsers.add_parser(name)
         command_parser.add_argument("date", type=_parse_date)
 
@@ -228,8 +354,13 @@ def main():
         inspect_challenge(arguments.date)
     elif arguments.command == "approve":
         approve(arguments.date)
-    else:
+    elif arguments.command == "regenerate":
         regenerate(arguments.date)
+    elif arguments.command == "validate":
+        if not validate_challenge(arguments.date):
+            raise SystemExit(1)
+    else:
+        repair(arguments.date)
 
 
 if __name__ == "__main__":

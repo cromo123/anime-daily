@@ -1192,6 +1192,72 @@ def delete_draft_challenge(challenge_date, database_path=DATABASE_PATH):
     return cursor.rowcount > 0
 
 
+def load_challenge_player_activity(challenge_id, database_path=DATABASE_PATH):
+    """Return official answer/result counts for a challenge before repair."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM player_answers WHERE challenge_id = ?) AS answer_rows,
+                (SELECT COUNT(*) FROM player_results WHERE challenge_id = ?) AS result_rows,
+                (SELECT COUNT(DISTINCT player_id) FROM player_answers
+                 WHERE challenge_id = ?) AS answer_players,
+                (SELECT COUNT(DISTINCT player_id) FROM player_results
+                 WHERE challenge_id = ?) AS result_players
+            """,
+            (challenge_id, challenge_id, challenge_id, challenge_id),
+        ).fetchone()
+    finally:
+        connection.close()
+    return dict(row)
+
+
+def delete_challenge(
+    challenge_date,
+    database_path=DATABASE_PATH,
+    allow_approved=False,
+):
+    """Delete one challenge only after enforcing repair safety checks."""
+    normalized_date = _parse_challenge_date(challenge_date).isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        query = """
+            SELECT id, publication_state
+            FROM challenge_runs
+            WHERE challenge_date = ?
+        """
+        if getattr(connection, "is_postgres", False):
+            query += " FOR UPDATE"
+        record = connection.execute(query, (normalized_date,)).fetchone()
+        if record is None:
+            return False
+        if record["publication_state"] == "approved" and not allow_approved:
+            raise ValueError("Approved challenges require explicit repair authorization.")
+
+        activity = load_challenge_player_activity(record["id"], database_path)
+        if activity["answer_rows"] or activity["result_rows"]:
+            raise ValueError(
+                "Challenge has official player answers/results; manual intervention is required."
+            )
+
+        connection.execute(
+            "DELETE FROM challenge_runs WHERE id = ?",
+            (record["id"],),
+        )
+        connection.commit()
+        return True
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
 def load_recent_matchup_pairs(
     challenge_date,
     recent_days,
@@ -1239,6 +1305,22 @@ def record_challenge(
 
     if created_at is None:
         created_at = datetime.now(timezone.utc).isoformat()
+
+    if Path(database_path).resolve() == DATABASE_PATH.resolve() or _postgres_enabled(database_path):
+        from challenge import contains_known_synthetic_fixture
+
+        if contains_known_synthetic_fixture(challenge):
+            raise ValueError(
+                "Synthetic fixture challenges may only be written to a temporary test database."
+            )
+
+    if publication_state == "approved":
+        # Keep direct database callers subject to the same publication gate as
+        # the API and the developer approval workflow. Drafts remain available
+        # for inspection and are validated when they are approved.
+        from challenge import validate_public_challenge
+
+        validate_public_challenge(challenge, challenge_date, database_path)
 
     initialize_database(database_path)
     connection = _connect_database(database_path)

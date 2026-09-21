@@ -17,6 +17,8 @@ from challenge import (
     evaluate_comparison,
     load_stored_challenge,
     serialize_public_challenge,
+    validate_public_challenge,
+    PublicChallengeValidationError,
     verify_completed_answers,
 )
 from database import (
@@ -167,18 +169,17 @@ def load_challenge_for_api(requested_date):
     if challenge is None:
         raise HTTPException(status_code=404, detail="Challenge not found.")
 
-    synthetic_title = re.compile(
-        r"^(?:Higher Score|More Popular|More Episodes|More Recent)\d+$"
-    )
-    if any(
-        synthetic_title.fullmatch(anime.get("title", ""))
-        for category in challenge
-        for anime in category.get("anime", [])
-    ):
+    try:
+        validate_public_challenge(
+            challenge,
+            requested_date,
+            app.state.database_path,
+        )
+    except PublicChallengeValidationError as error:
         raise HTTPException(
             status_code=503,
             detail="The official challenge is unavailable.",
-        )
+        ) from error
 
     return challenge
 
@@ -337,7 +338,7 @@ def get_today_challenge(request: Request, local_date: str | None = None):
 
 
 @app.get("/challenge/{challenge_date}")
-def get_dated_challenge(challenge_date: str):
+def get_dated_challenge(challenge_date: str, request: Request):
     requested_date = parse_challenge_date(challenge_date)
     challenge = load_challenge_for_api(requested_date)
     return challenge_with_progress(request, requested_date, challenge)
