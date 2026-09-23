@@ -1,6 +1,10 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+import database as database_module
 
 from challenge import (
     CATEGORY_RULES,
@@ -226,6 +230,45 @@ class SeriesDisplayTests(unittest.TestCase):
         self.assertIsNone(
             load_series_representatives([9001], self.database_path)[9001]
         )
+
+    def test_representatives_use_two_bulk_queries_and_process_cache(self):
+        database_module._invalidate_series_representative_cache(self.database_path)
+        statements = []
+        connection_count = 0
+
+        def tracked_connection(database_path):
+            nonlocal connection_count
+            connection_count += 1
+            connection = sqlite3.connect(database_path)
+            connection.set_trace_callback(statements.append)
+            return connection
+
+        requested_ids = [
+            self.first_season["mal_id"],
+            self.season_two["mal_id"],
+            self.season_three["mal_id"],
+            self.standalone["mal_id"],
+        ]
+        with (
+            patch("database.initialize_database"),
+            patch("database._connect_database", side_effect=tracked_connection),
+        ):
+            first = load_series_representatives(
+                requested_ids, self.database_path
+            )
+            second = load_series_representatives(
+                list(reversed(requested_ids)), self.database_path
+            )
+
+        select_statements = [
+            statement
+            for statement in statements
+            if statement.lstrip().upper().startswith("SELECT")
+        ]
+        self.assertEqual(len(select_statements), 2)
+        self.assertEqual(connection_count, 1)
+        self.assertEqual(first[self.season_three["mal_id"]]["mal_id"], 16498)
+        self.assertEqual(second[self.season_three["mal_id"]]["mal_id"], 16498)
 
 
 if __name__ == "__main__":

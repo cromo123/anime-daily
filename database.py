@@ -180,6 +180,7 @@ EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
 MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
 DERIVATIVE_CHILD_RELATION_TYPES = {"parent_story", "full_story"}
 FAILURE_STATE_KEY = "catalog_failures_initialized"
+_SERIES_REPRESENTATIVE_CACHE = {}
 
 
 class _HybridRow(dict):
@@ -197,6 +198,19 @@ def _postgres_enabled(database_path):
         return False
     # Explicit temporary/alternate paths remain SQLite during migration.
     return Path(database_path).resolve() == DATABASE_PATH.resolve()
+
+
+def _series_representative_cache_key(database_path):
+    if _postgres_enabled(database_path):
+        return "postgres", os.environ["DATABASE_URL"]
+    return "sqlite", str(Path(database_path).resolve())
+
+
+def _invalidate_series_representative_cache(database_path):
+    _SERIES_REPRESENTATIVE_CACHE.pop(
+        _series_representative_cache_key(database_path),
+        None,
+    )
 
 
 def _replace_placeholders(sql):
@@ -394,6 +408,7 @@ def upsert_anime_records(anime_records, database_path=DATABASE_PATH):
     finally:
         connection.close()
 
+    _invalidate_series_representative_cache(database_path)
     return len(rows)
 
 
@@ -499,6 +514,7 @@ def store_anime_relations(anime_id, relations, database_path=DATABASE_PATH):
     finally:
         connection.close()
 
+    _invalidate_series_representative_cache(database_path)
     return len(relation_rows)
 
 
@@ -566,16 +582,6 @@ def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
     if not anime_ids:
         return {}
 
-    initialize_database(database_path)
-    connection = _connect_database(database_path)
-    connection.row_factory = sqlite3.Row
-    relation_types = tuple(sorted(MAINLINE_RELATION_TYPES))
-    relation_placeholders = ", ".join("?" for _ in relation_types)
-    anime_cache = {}
-    relation_cache = {}
-    derivative_cache = {}
-    resolved_representatives = {}
-
     def release_order_key(value):
         parts = str(value or "").split("-")
         if not 1 <= len(parts) <= 3 or any(not part.isdigit() for part in parts):
@@ -589,102 +595,97 @@ def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
             return None
         return year, month, day
 
-    def get_anime(anime_id):
-        if anime_id not in anime_cache:
-            anime_cache[anime_id] = connection.execute(
+    cache_key = _series_representative_cache_key(database_path)
+    if cache_key not in _SERIES_REPRESENTATIVE_CACHE:
+        initialize_database(database_path)
+        connection = _connect_database(database_path)
+        connection.row_factory = sqlite3.Row
+        relevant_relation_types = tuple(
+            sorted(MAINLINE_RELATION_TYPES | DERIVATIVE_CHILD_RELATION_TYPES)
+        )
+        placeholders = ", ".join("?" for _ in relevant_relation_types)
+
+        try:
+            anime_rows = connection.execute(
                 """
                 SELECT mal_id, title, image_url, type, release_date,
                        relations_fetched
                 FROM anime
-                WHERE mal_id = ?
-                """,
-                (anime_id,),
-            ).fetchone()
-        return anime_cache[anime_id]
-
-    def is_derivative_child(anime_id):
-        if anime_id not in derivative_cache:
-            placeholders = ", ".join(
-                "?" for _ in DERIVATIVE_CHILD_RELATION_TYPES
-            )
-            relation_types = tuple(sorted(DERIVATIVE_CHILD_RELATION_TYPES))
-            derivative_cache[anime_id] = connection.execute(
-                f"""
-                SELECT 1
-                FROM anime_relations
-                WHERE source_mal_id = ?
-                  AND relation_type IN ({placeholders})
-                LIMIT 1
-                """,
-                (anime_id, *relation_types),
-            ).fetchone() is not None
-        return derivative_cache[anime_id]
-
-    def get_mainline_relations(anime_id):
-        if anime_id not in relation_cache:
-            relation_cache[anime_id] = connection.execute(
+                """
+            ).fetchall()
+            relation_rows = connection.execute(
                 f"""
                 SELECT source_mal_id, target_mal_id, relation_type
                 FROM anime_relations
-                WHERE relation_type IN ({relation_placeholders})
-                  AND (source_mal_id = ? OR target_mal_id = ?)
+                WHERE relation_type IN ({placeholders})
                 """,
-                (*relation_types, anime_id, anime_id),
+                relevant_relation_types,
             ).fetchall()
-        return relation_cache[anime_id]
+        finally:
+            connection.close()
 
-    try:
-        for anime_id in anime_ids:
+        anime_by_id = {row["mal_id"]: row for row in anime_rows}
+        derivative_children = set()
+        neighbors = {}
+        relations_by_member = {}
+
+        for relation in relation_rows:
+            source_id = relation["source_mal_id"]
+            target_id = relation["target_mal_id"]
+            relation_type = relation["relation_type"]
+
+            if relation_type in DERIVATIVE_CHILD_RELATION_TYPES:
+                derivative_children.add(source_id)
+                continue
+
+            relation = (source_id, target_id, relation_type)
+            relations_by_member.setdefault(source_id, set()).add(relation)
+            relations_by_member.setdefault(target_id, set()).add(relation)
+            neighbors.setdefault(source_id, set()).add(target_id)
+            neighbors.setdefault(target_id, set()).add(source_id)
+
+        resolved_representatives = {}
+        graph_ids = set(anime_by_id) | set(neighbors)
+
+        for anime_id in graph_ids:
             if anime_id in resolved_representatives:
                 continue
 
             to_visit = [anime_id]
             component = set()
-            component_relations = set()
-            complete = True
 
             while to_visit:
                 current_id = to_visit.pop()
-
                 if current_id in component:
                     continue
-
                 component.add(current_id)
-                anime = get_anime(current_id)
-
-                if anime is None or not anime["relations_fetched"]:
-                    complete = False
-
-                for relation in get_mainline_relations(current_id):
-                    source_id = relation["source_mal_id"]
-                    target_id = relation["target_mal_id"]
-                    component_relations.add(
-                        (source_id, target_id, relation["relation_type"])
-                    )
-                    to_visit.append(source_id)
-                    to_visit.append(target_id)
+                to_visit.extend(neighbors.get(current_id, set()) - component)
 
             representative = None
+            complete = all(
+                member_id in anime_by_id
+                and anime_by_id[member_id]["relations_fetched"]
+                for member_id in component
+            )
 
             if complete:
                 predecessors = {member_id: set() for member_id in component}
                 successors = {member_id: set() for member_id in component}
+                component_relations = set().union(
+                    *(
+                        relations_by_member.get(member_id, set())
+                        for member_id in component
+                    )
+                )
 
                 for source_id, target_id, relation_type in component_relations:
                     if relation_type == "prequel":
                         earlier_id, later_id = target_id, source_id
                     else:
                         earlier_id, later_id = source_id, target_id
-
                     predecessors[later_id].add(earlier_id)
                     successors[earlier_id].add(later_id)
 
-                mainline_episodic_ids = {
-                    member_id
-                    for member_id in component
-                    if get_anime(member_id)["type"] in EPISODIC_MEDIA_TYPES
-                    and not is_derivative_child(member_id)
-                }
                 remaining_predecessors = {
                     member_id: len(earlier_ids)
                     for member_id, earlier_ids in predecessors.items()
@@ -699,16 +700,19 @@ def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
                 while ready:
                     current_id = ready.pop()
                     processed += 1
-
                     for later_id in successors[current_id]:
                         remaining_predecessors[later_id] -= 1
-
                         if remaining_predecessors[later_id] == 0:
                             ready.append(later_id)
 
                 release_order = []
-                for member_id in mainline_episodic_ids:
-                    anime = get_anime(member_id)
+                for member_id in component:
+                    anime = anime_by_id[member_id]
+                    if (
+                        anime["type"] not in EPISODIC_MEDIA_TYPES
+                        or member_id in derivative_children
+                    ):
+                        continue
                     released = release_order_key(anime["release_date"])
                     if released is None:
                         complete = False
@@ -717,7 +721,7 @@ def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
 
                 if complete and processed == len(component) and release_order:
                     _, representative_id = min(release_order)
-                    representative_anime = get_anime(representative_id)
+                    representative_anime = anime_by_id[representative_id]
                     representative = {
                         "mal_id": representative_anime["mal_id"],
                         "title": representative_anime["title"],
@@ -726,11 +730,13 @@ def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
 
             for member_id in component:
                 resolved_representatives[member_id] = representative
-    finally:
-        connection.close()
+
+        _SERIES_REPRESENTATIVE_CACHE[cache_key] = resolved_representatives
+
+    resolved_representatives = _SERIES_REPRESENTATIVE_CACHE[cache_key]
 
     return {
-        anime_id: resolved_representatives[anime_id]
+        anime_id: resolved_representatives.get(anime_id)
         for anime_id in anime_ids
     }
 
