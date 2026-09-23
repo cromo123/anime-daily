@@ -812,6 +812,10 @@ def validate_public_challenge(
         ] if more_episodes else [],
         database_path,
     )
+    recent_by_category = load_recent_category_usage(
+        challenge_date,
+        database_path,
+    )
     seen_ids = set()
 
     for rule in CATEGORY_RULES:
@@ -858,6 +862,16 @@ def validate_public_challenge(
                     errors.append(
                         f"MAL ID {mal_id} is not its canonical series representative"
                     )
+                cooldown_id = (
+                    representative["mal_id"] if representative else mal_id
+                )
+            else:
+                cooldown_id = mal_id
+            if cooldown_id in recent_by_category.get(rule["name"], set()):
+                errors.append(
+                    f"MAL ID {mal_id} repeats {rule['name']} within the "
+                    f"{RECENT_ANIME_DAYS}-day category cooldown"
+                )
 
         for anime_a, anime_b in zip(anime_order, anime_order[1:]):
             value_a = get_comparison_value(anime_a, rule["metric"])

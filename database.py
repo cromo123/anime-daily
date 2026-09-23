@@ -1089,6 +1089,7 @@ def load_recent_category_anime_ids(
     latest_date = challenge_date.isoformat()
     initialize_database(database_path)
     connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
 
     try:
         rows = connection.execute(
@@ -1106,8 +1107,8 @@ def load_recent_category_anime_ids(
         connection.close()
 
     recent_by_category = {}
-    for category, mal_id in rows:
-        recent_by_category.setdefault(category, set()).add(mal_id)
+    for row in rows:
+        recent_by_category.setdefault(row["category"], set()).add(row["mal_id"])
     return recent_by_category
 
 

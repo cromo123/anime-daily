@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import database as database_module
+
 from challenge import (
     CATEGORY_RULES,
     PublicChallengeValidationError,
@@ -13,7 +15,12 @@ from challenge import (
     load_recent_category_usage,
     validate_public_challenge,
 )
-from database import initialize_database, store_anime_relations, upsert_anime_records
+from database import (
+    initialize_database,
+    load_recent_category_anime_ids,
+    store_anime_relations,
+    upsert_anime_records,
+)
 
 
 def anime(mal_id, title, release_date, series_episodes, score=8.0, members=1000):
@@ -96,6 +103,26 @@ class MoreEpisodesRuleTests(unittest.TestCase):
             {**rule, "anime": list(self.category_anime[rule["name"]])}
             for rule in CATEGORY_RULES
         ]
+
+    def store_recent_placement(
+        self,
+        category,
+        mal_id,
+        challenge_date="2026-09-22",
+    ):
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                "INSERT INTO challenge_runs VALUES (1, ?, 'now', 'approved')",
+                (challenge_date,),
+            )
+            connection.execute(
+                "INSERT INTO challenge_anime VALUES (1, ?, 1, ?)",
+                (category, mal_id),
+            )
+            connection.commit()
+        finally:
+            connection.close()
 
     def test_public_validation_rejects_sequel_and_derivative_child(self):
         validate_public_challenge(
@@ -192,6 +219,88 @@ class MoreEpisodesRuleTests(unittest.TestCase):
                 )
         self.assertEqual(attempt.call_count, 1)
         self.assertIs(attempt.call_args.args[1], recent)
+
+    def test_postgres_hybrid_rows_are_read_by_column_name(self):
+        class Cursor:
+            def fetchall(self):
+                return [
+                    database_module._HybridRow(
+                        category="Higher Score",
+                        mal_id=123,
+                    ),
+                    database_module._HybridRow(
+                        category="More Episodes",
+                        mal_id=456,
+                    ),
+                ]
+
+        class Connection:
+            def execute(self, sql, parameters):
+                return Cursor()
+
+            def close(self):
+                pass
+
+        with (
+            patch("database.initialize_database"),
+            patch("database._connect_database", return_value=Connection()),
+        ):
+            recent = load_recent_category_anime_ids(
+                "2026-09-23",
+                7,
+                self.database_path,
+            )
+
+        self.assertEqual(
+            recent,
+            {
+                "Higher Score": {123},
+                "More Episodes": {456},
+            },
+        )
+
+    def test_public_validation_rejects_same_category_cooldown_reuse(self):
+        repeated = self.category_anime["Higher Score"][0]
+        self.store_recent_placement("Higher Score", repeated["mal_id"])
+
+        with self.assertRaisesRegex(
+            PublicChallengeValidationError,
+            "repeats Higher Score within the 7-day category cooldown",
+        ):
+            validate_public_challenge(
+                self.valid_challenge(), "2026-09-23", self.database_path
+            )
+
+    def test_public_validation_normalizes_more_episodes_cooldown(self):
+        self.store_recent_placement("More Episodes", self.series_sequel["mal_id"])
+
+        with self.assertRaisesRegex(
+            PublicChallengeValidationError,
+            "repeats More Episodes within the 7-day category cooldown",
+        ):
+            validate_public_challenge(
+                self.valid_challenge(), "2026-09-23", self.database_path
+            )
+
+    def test_public_validation_allows_cross_category_history_reuse(self):
+        reused = self.category_anime["Higher Score"][0]
+        self.store_recent_placement("More Popular", reused["mal_id"])
+
+        validate_public_challenge(
+            self.valid_challenge(), "2026-09-23", self.database_path
+        )
+
+    def test_public_validation_does_not_compare_challenge_to_itself(self):
+        repeated = self.category_anime["Higher Score"][0]
+        self.store_recent_placement(
+            "Higher Score",
+            repeated["mal_id"],
+            challenge_date="2026-09-23",
+        )
+
+        validate_public_challenge(
+            self.valid_challenge(), "2026-09-23", self.database_path
+        )
 
 
 if __name__ == "__main__":
