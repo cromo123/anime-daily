@@ -112,13 +112,7 @@ def replenish(days_ahead=7, reference_date=None):
         )
 
         if existing is not None and existing["publication_state"] == "approved":
-            try:
-                _validate_stored_date(challenge_date, include_drafts=False)
-            except PublicChallengeValidationError as error:
-                unresolved.append(challenge_date)
-                print(f"{challenge_date}: approved but invalid: {error}")
-            else:
-                print(f"{challenge_date}: already approved")
+            print(f"{challenge_date}: already approved")
             continue
 
         if existing is not None and existing["publication_state"] == "draft":

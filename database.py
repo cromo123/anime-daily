@@ -181,6 +181,7 @@ MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
 DERIVATIVE_CHILD_RELATION_TYPES = {"parent_story", "full_story"}
 FAILURE_STATE_KEY = "catalog_failures_initialized"
 _SERIES_REPRESENTATIVE_CACHE = {}
+_POSTGRES_INITIALIZED_TARGETS = set()
 
 
 class _HybridRow(dict):
@@ -365,15 +366,28 @@ def normalize_matchup_pair(anime_a_id, anime_b_id):
 
 def initialize_database(database_path=DATABASE_PATH):
     database_path = Path(database_path)
-    if not _postgres_enabled(database_path):
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = _connect_database(database_path)
+    if _postgres_enabled(database_path):
+        cache_key = _series_representative_cache_key(database_path)
+        if cache_key in _POSTGRES_INITIALIZED_TARGETS:
+            return
 
-    try:
-        if getattr(connection, "is_postgres", False):
+        connection = _connect_database(database_path)
+        try:
             _initialize_postgres(connection)
-        else:
-            _initialize_sqlite(connection)
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+        _POSTGRES_INITIALIZED_TARGETS.add(cache_key)
+        return
+
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = _connect_database(database_path)
+    try:
+        _initialize_sqlite(connection)
         connection.commit()
     finally:
         connection.close()
