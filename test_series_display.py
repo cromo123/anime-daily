@@ -6,13 +6,30 @@ from challenge import (
     CATEGORY_RULES,
     evaluate_category_comparison,
     is_eligible,
+    load_series_display_metadata,
     serialize_public_challenge,
 )
 from database import (
-    load_series_display_roots,
+    load_series_representatives,
+    resolve_and_store_series_episode_count,
     store_anime_relations,
     upsert_anime_records,
 )
+
+
+def anime(mal_id, title, release_date, media_type="tv", episodes=12, series=12):
+    return {
+        "mal_id": mal_id,
+        "title": title,
+        "image_url": f"https://example.test/{mal_id}.jpg",
+        "type": media_type,
+        "release_date": release_date,
+        "entry_episodes": episodes,
+        "series_episodes": series,
+        "score": 8.0,
+        "popularity_rank": mal_id,
+        "members": 1000 + mal_id,
+    }
 
 
 class SeriesDisplayTests(unittest.TestCase):
@@ -21,36 +38,20 @@ class SeriesDisplayTests(unittest.TestCase):
         self.addCleanup(self.temporary_directory.cleanup)
         self.database_path = Path(self.temporary_directory.name) / "anime_daily.db"
 
-        self.root = {
-            "mal_id": 16498,
-            "title": "Shingeki no Kyojin",
-            "image_url": "https://example.test/season-one.jpg",
-            "type": "tv",
-            "series_episodes": 89,
-        }
-        self.season_two = {
-            "mal_id": 25777,
-            "title": "Shingeki no Kyojin Season 2",
-            "image_url": "https://example.test/season-two.jpg",
-            "type": "tv",
-            "series_episodes": 89,
-        }
-        self.season_three = {
-            "mal_id": 35760,
-            "title": "Shingeki no Kyojin Season 3",
-            "image_url": "https://example.test/season-three.jpg",
-            "type": "tv",
-            "series_episodes": 89,
-        }
-        self.standalone_root = {
-            "mal_id": 999,
-            "title": "Standalone Anime",
-            "image_url": "https://example.test/standalone.jpg",
-            "type": "tv",
-            "series_episodes": 12,
-        }
+        self.first_season = anime(
+            16498, "Shingeki no Kyojin", "2013-04-07", episodes=25, series=89
+        )
+        self.season_two = anime(
+            25777, "Shingeki no Kyojin Season 2", "2017-04-01", episodes=12, series=89
+        )
+        self.season_three = anime(
+            35760, "Shingeki no Kyojin Season 3", "2018-07-23", episodes=22, series=89
+        )
+        self.standalone = anime(
+            999, "Standalone Anime", "2010-01-01", episodes=12, series=12
+        )
         upsert_anime_records(
-            [self.root, self.season_two, self.season_three, self.standalone_root],
+            [self.first_season, self.season_two, self.season_three, self.standalone],
             self.database_path,
         )
         store_anime_relations(
@@ -73,133 +74,157 @@ class SeriesDisplayTests(unittest.TestCase):
         )
         store_anime_relations(999, [], self.database_path)
 
-    def test_sequel_and_root_share_first_entry_display_identity(self):
-        roots = load_series_display_roots(
-            [35760, 16498, 999],
-            self.database_path,
+    def test_only_first_release_is_selectable_series_representative(self):
+        representatives = load_series_representatives(
+            [35760, 16498, 999], self.database_path
         )
-        self.assertEqual(roots[35760]["mal_id"], 16498)
-        self.assertEqual(roots[16498]["mal_id"], 16498)
-        self.assertEqual(roots[999]["mal_id"], 999)
+        self.assertEqual(representatives[35760]["mal_id"], 16498)
+        self.assertEqual(representatives[16498]["mal_id"], 16498)
+        self.assertEqual(representatives[999]["mal_id"], 999)
+
+        catalog = [self.first_season, self.season_two, self.season_three, self.standalone]
+        representative_ids, _ = load_series_display_metadata(
+            catalog, self.database_path
+        )
+        self.assertIn(16498, representative_ids)
+        self.assertIn(999, representative_ids)
+        self.assertNotIn(25777, representative_ids)
+        self.assertNotIn(35760, representative_ids)
+
+        episodes_rule = next(
+            rule for rule in CATEGORY_RULES if rule["name"] == "More Episodes"
+        )
+        self.assertTrue(
+            is_eligible(
+                self.first_season, episodes_rule, set(), set(), representative_ids
+            )
+        )
+        self.assertFalse(
+            is_eligible(
+                self.season_three, episodes_rule, set(), set(), representative_ids
+            )
+        )
 
         episodes_category = {
-            "name": "More Episodes",
-            "metric": "series_episodes",
-            "question": "Which anime series has more episodes?",
-            "anime": [self.season_three, self.standalone_root],
+            **episodes_rule,
+            "anime": [self.first_season, self.standalone],
         }
-        score_category = {
-            "name": "Higher Score",
-            "metric": "score",
-            "question": "Which anime has the higher score?",
-            "anime": [self.season_three],
-        }
+        score_category = {**CATEGORY_RULES[0], "anime": [self.season_three]}
         public = serialize_public_challenge(
             "2026-09-13",
             [episodes_category, score_category],
             self.database_path,
         )
-        displayed_sequel = public["categories"][0]["anime"][0]
-        self.assertEqual(displayed_sequel["mal_id"], 35760)
-        self.assertEqual(displayed_sequel["title"], self.root["title"])
-        self.assertEqual(displayed_sequel["image_url"], self.root["image_url"])
+        displayed_series = public["categories"][0]["anime"][0]
+        self.assertEqual(displayed_series["mal_id"], 16498)
+        self.assertEqual(displayed_series["title"], self.first_season["title"])
+        self.assertEqual(displayed_series["image_url"], self.first_season["image_url"])
         self.assertEqual(
             public["categories"][1]["anime"][0]["title"],
             self.season_three["title"],
         )
-        self.assertEqual(
-            public["categories"][1]["anime"][0]["image_url"],
-            self.season_three["image_url"],
-        )
 
-        result = evaluate_category_comparison(episodes_category, 1, 35760)
+        result = evaluate_category_comparison(episodes_category, 1, 16498)
         self.assertTrue(result["correct"])
         self.assertEqual(result["revealed_anime"][0]["series_episodes"], 89)
 
-    def test_incomplete_graph_does_not_claim_sequel_is_root(self):
-        unresolved_sequel = {
-            "mal_id": 7001,
-            "title": "Unresolved Season 2",
-            "image_url": "https://example.test/unresolved-season.jpg",
-            "type": "tv",
-        }
-        upsert_anime_records(
-            [unresolved_sequel],
-            self.database_path,
+    def test_release_order_wins_over_story_chronology(self):
+        movie = anime(9101, "Story-First Movie", "2016-01-08", "movie", 1, 40)
+        later_special = anime(
+            9102, "Chronological TV Special", "2012-12-31", "tv_special", 4, 40
         )
-        roots = load_series_display_roots([7001], self.database_path)
-        self.assertIsNone(roots[7001])
-        public = serialize_public_challenge(
-            "2026-09-13",
-            [
-                {
-                    "name": "More Episodes",
-                    "question": "Which series?",
-                    "anime": [unresolved_sequel],
-                }
-            ],
-            self.database_path,
+        first_released_tv = anime(
+            9103, "First Released Main TV", "2009-07-03", "tv", 15, 40
         )
-        displayed = public["categories"][0]["anime"][0]
-        self.assertEqual(displayed["title"], "Series root unavailable")
-        self.assertIsNone(displayed["image_url"])
-        self.assertEqual(displayed["mal_id"], 7001)
-
-    def test_multiple_roots_are_not_guessed_from_titles(self):
         upsert_anime_records(
+            [movie, later_special, first_released_tv], self.database_path
+        )
+        store_anime_relations(
+            9101, [{"mal_id": 9102, "relation_type": "sequel"}], self.database_path
+        )
+        store_anime_relations(
+            9102,
             [
-                {"mal_id": 8001, "title": "First Possible Root", "type": "tv"},
-                {"mal_id": 8002, "title": "Second Possible Root", "type": "tv"},
-                {"mal_id": 8003, "title": "Shared Sequel", "type": "tv"},
+                {"mal_id": 9101, "relation_type": "prequel"},
+                {"mal_id": 9103, "relation_type": "sequel"},
             ],
             self.database_path,
         )
         store_anime_relations(
-            8001,
-            [{"mal_id": 8003, "relation_type": "sequel"}],
-            self.database_path,
+            9103, [{"mal_id": 9102, "relation_type": "prequel"}], self.database_path
+        )
+
+        representatives = load_series_representatives(
+            [9101, 9102, 9103], self.database_path
+        )
+        self.assertEqual(representatives[9101]["mal_id"], 9103)
+        self.assertEqual(representatives[9102]["mal_id"], 9103)
+        self.assertEqual(representatives[9103]["mal_id"], 9103)
+
+    def test_derivative_children_are_not_series_candidates_or_contributors(self):
+        main_one = anime(9201, "Main TV", "2013-01-01", episodes=25, series=37)
+        main_two = anime(9202, "Main TV 2", "2017-01-01", episodes=12, series=37)
+        side_ova = anime(9203, "Side OVA", "2014-01-01", "ova", 3, 3)
+        recap = anime(9204, "Recap", "2018-01-01", "special", 1, 1)
+        upsert_anime_records(
+            [main_one, main_two, side_ova, recap], self.database_path
         )
         store_anime_relations(
-            8002,
-            [{"mal_id": 8003, "relation_type": "sequel"}],
-            self.database_path,
-        )
-        store_anime_relations(8003, [], self.database_path)
-
-        roots = load_series_display_roots([8003], self.database_path)
-        self.assertIsNone(roots[8003])
-
-    def test_unresolved_identity_is_excluded_only_from_more_episodes(self):
-        anime = {"mal_id": 7001, "type": "tv", "score": 8.0, "series_episodes": 24}
-        episodes_category = next(
-            rule for rule in CATEGORY_RULES if rule["name"] == "More Episodes"
-        )
-        score_category = CATEGORY_RULES[0]
-
-        self.assertFalse(is_eligible(anime, episodes_category, set(), set(), set()))
-        self.assertTrue(is_eligible(anime, score_category, set(), set(), set()))
-
-    def test_cyclic_prequel_sequel_graph_has_no_claimed_root(self):
-        upsert_anime_records(
+            9201,
             [
-                {"mal_id": 9001, "title": "Cycle One", "type": "tv"},
-                {"mal_id": 9002, "title": "Cycle Two", "type": "tv"},
+                {"mal_id": 9202, "relation_type": "sequel"},
+                {"mal_id": 9203, "relation_type": "side_story"},
+                {"mal_id": 9204, "relation_type": "summary"},
             ],
             self.database_path,
         )
         store_anime_relations(
-            9001,
-            [{"mal_id": 9002, "relation_type": "sequel"}],
-            self.database_path,
+            9202, [{"mal_id": 9201, "relation_type": "prequel"}], self.database_path
         )
         store_anime_relations(
-            9002,
-            [{"mal_id": 9001, "relation_type": "sequel"}],
-            self.database_path,
+            9203, [{"mal_id": 9201, "relation_type": "parent_story"}], self.database_path
+        )
+        store_anime_relations(
+            9204, [{"mal_id": 9201, "relation_type": "full_story"}], self.database_path
         )
 
+        representatives = load_series_representatives(
+            [9201, 9202, 9203, 9204], self.database_path
+        )
+        self.assertEqual(representatives[9201]["mal_id"], 9201)
+        self.assertEqual(representatives[9202]["mal_id"], 9201)
+        self.assertIsNone(representatives[9203])
+        self.assertIsNone(representatives[9204])
+        self.assertEqual(
+            resolve_and_store_series_episode_count(9201, self.database_path), 37
+        )
+        self.assertEqual(
+            resolve_and_store_series_episode_count(9203, self.database_path), 3
+        )
+
+        representative_ids, _ = load_series_display_metadata(
+            [main_one, main_two, side_ova, recap], self.database_path
+        )
+        self.assertEqual(representative_ids, {9201})
+
+    def test_incomplete_or_cyclic_graph_has_no_representative(self):
+        unresolved = anime(7001, "Unresolved Season", "2020-01-01")
+        upsert_anime_records([unresolved], self.database_path)
         self.assertIsNone(
-            load_series_display_roots([9001], self.database_path)[9001]
+            load_series_representatives([7001], self.database_path)[7001]
+        )
+
+        cycle_one = anime(9001, "Cycle One", "2020-01-01")
+        cycle_two = anime(9002, "Cycle Two", "2021-01-01")
+        upsert_anime_records([cycle_one, cycle_two], self.database_path)
+        store_anime_relations(
+            9001, [{"mal_id": 9002, "relation_type": "sequel"}], self.database_path
+        )
+        store_anime_relations(
+            9002, [{"mal_id": 9001, "relation_type": "sequel"}], self.database_path
+        )
+        self.assertIsNone(
+            load_series_representatives([9001], self.database_path)[9001]
         )
 
 

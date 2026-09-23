@@ -708,7 +708,7 @@ function addChoiceMarker(card) {
   card.append(marker);
 }
 
-function createAnimeCard(anime, choiceNumber, entering = false) {
+function createAnimeCard(anime, entering = false) {
   const card = document.createElement("button");
   card.className = "anime-card";
   card.type = "button";
@@ -724,20 +724,21 @@ function createAnimeCard(anime, choiceNumber, entering = false) {
   const cardCopy = document.createElement("div");
   cardCopy.className = "card-copy";
 
-  const number = document.createElement("span");
-  number.className = "choice-number";
-  number.textContent = String(choiceNumber);
-
   const title = document.createElement("h2");
   title.className = "anime-title";
   title.textContent = anime.title;
 
-  cardCopy.append(number, title);
+  cardCopy.append(title);
   if (currentRound().name === "More Episodes") {
-    const seriesLabel = document.createElement("p");
-    seriesLabel.className = "series-label";
-    seriesLabel.textContent = "Full anime series";
-    cardCopy.append(seriesLabel);
+    const seriesContext = document.createElement("div");
+    seriesContext.className = "series-context";
+    for (const text of ["+ All existing sequels", "Full anime series"]) {
+      const seriesLabel = document.createElement("p");
+      seriesLabel.className = "series-label";
+      seriesLabel.textContent = text;
+      seriesContext.append(seriesLabel);
+    }
+    cardCopy.append(seriesContext);
   }
   card.append(createCover(anime), cardCopy);
 
@@ -812,8 +813,8 @@ function renderComparison() {
   elements.requestError.hidden = true;
   elements.retryCompletionButton.hidden = true;
   elements.animeCards.replaceChildren(
-    createAnimeCard(animePair[0], 1),
-    createAnimeCard(animePair[1], 2),
+    createAnimeCard(animePair[0]),
+    createAnimeCard(animePair[1]),
   );
 
 }
@@ -932,7 +933,6 @@ function prepareCarriedCard(card, anime) {
   card.disabled = true;
 
   card.querySelector(".card-verdict")?.remove();
-  card.querySelector(".choice-number").textContent = "1";
   card.addEventListener("click", () => submitAnswer(anime.mal_id));
 }
 
@@ -966,7 +966,7 @@ async function animateToNextComparison() {
 
   const [carriedAnime, incomingAnime] = currentAnimePair();
   prepareCarriedCard(rightCard, carriedAnime);
-  const incomingCard = createAnimeCard(incomingAnime, 2, true);
+  const incomingCard = createAnimeCard(incomingAnime, true);
   elements.animeCards.append(incomingCard);
   updateRoundStatus();
 

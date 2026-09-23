@@ -6,9 +6,9 @@ from database import (
     DATABASE_PATH,
     load_anime_records,
     load_challenge_record,
-    load_recent_anime_ids,
+    load_recent_category_anime_ids,
     load_recent_matchup_pairs,
-    load_series_display_roots,
+    load_series_representatives,
     normalize_matchup_pair,
     record_challenge,
 )
@@ -169,7 +169,7 @@ def is_eligible(
     category,
     used_anime_ids,
     blocked_anime_ids,
-    series_displayable_ids=None,
+    series_representative_ids=None,
 ):
     mal_id = anime.get("mal_id")
 
@@ -185,8 +185,8 @@ def is_eligible(
 
     if (
         category["name"] == "More Episodes"
-        and series_displayable_ids is not None
-        and mal_id not in series_displayable_ids
+        and series_representative_ids is not None
+        and mal_id not in series_representative_ids
     ):
         return False
 
@@ -214,9 +214,16 @@ def choose_stratified_candidate(
     return None
 
 
-def opening_popularity_tier(anime, category_name, series_root_popularity_ranks):
-    if category_name == "More Episodes" and series_root_popularity_ranks is not None:
-        rank = series_root_popularity_ranks.get(anime["mal_id"])
+def opening_popularity_tier(
+    anime,
+    category_name,
+    series_representative_popularity_ranks,
+):
+    if (
+        category_name == "More Episodes"
+        and series_representative_popularity_ranks is not None
+    ):
+        rank = series_representative_popularity_ranks.get(anime["mal_id"])
     else:
         rank = anime.get("popularity_rank")
 
@@ -247,7 +254,7 @@ def order_category_for_opening(
     recent_matchup_pairs,
     random_source,
     rating_context,
-    series_root_popularity_ranks=None,
+    series_representative_popularity_ranks=None,
 ):
     """Prefer a recognizable, moderately clear first comparison."""
     # Imported here because challenge_ratings imports the category rules above.
@@ -266,7 +273,9 @@ def order_category_for_opening(
         opening_tier_penalty = sum(
             OPENING_TIER_PENALTIES[
                 opening_popularity_tier(
-                    anime, category["name"], series_root_popularity_ranks
+                    anime,
+                    category["name"],
+                    series_representative_popularity_ranks,
                 )
             ]
             for anime in anime_order[:2]
@@ -312,9 +321,9 @@ def select_category_anime(
     blocked_anime_ids,
     recent_matchup_pairs,
     random_source,
-    series_displayable_ids=None,
+    series_representative_ids=None,
     rating_context=None,
-    series_root_popularity_ranks=None,
+    series_representative_popularity_ranks=None,
 ):
     candidates_by_id = {}
 
@@ -324,7 +333,7 @@ def select_category_anime(
             category,
             used_anime_ids,
             blocked_anime_ids,
-            series_displayable_ids,
+            series_representative_ids,
         ):
             candidates_by_id[anime["mal_id"]] = anime
 
@@ -380,18 +389,18 @@ def select_category_anime(
         recent_matchup_pairs,
         random_source,
         rating_context,
-        series_root_popularity_ranks,
+        series_representative_popularity_ranks,
     )
 
 
 def try_generate_challenge(
     catalog,
-    blocked_anime_ids,
+    recent_anime_ids_by_category,
     recent_matchup_pairs,
     random_source,
-    series_displayable_ids=None,
+    series_representative_ids=None,
     rating_context=None,
-    series_root_popularity_ranks=None,
+    series_representative_popularity_ranks=None,
 ):
     for _ in range(MAX_GENERATION_ATTEMPTS):
         used_anime_ids = set()
@@ -402,12 +411,12 @@ def try_generate_challenge(
                 catalog,
                 category,
                 used_anime_ids,
-                blocked_anime_ids,
+                recent_anime_ids_by_category.get(category["name"], set()),
                 recent_matchup_pairs,
                 random_source,
-                series_displayable_ids,
+                series_representative_ids,
                 rating_context,
-                series_root_popularity_ranks,
+                series_representative_popularity_ranks,
             )
 
             if selected_anime is None:
@@ -432,17 +441,17 @@ def try_generate_challenge(
 def generate_challenge(
     catalog,
     random_source=None,
-    recent_anime_ids=None,
+    recent_anime_ids_by_category=None,
     recent_matchup_pairs=None,
-    series_displayable_ids=None,
+    series_representative_ids=None,
     rating_context=None,
-    series_root_popularity_ranks=None,
+    series_representative_popularity_ranks=None,
 ):
     if random_source is None:
         random_source = random
 
-    if recent_anime_ids is None:
-        recent_anime_ids = set()
+    if recent_anime_ids_by_category is None:
+        recent_anime_ids_by_category = {}
 
     if recent_matchup_pairs is None:
         recent_matchup_pairs = set()
@@ -464,35 +473,22 @@ def generate_challenge(
 
     challenge = try_generate_challenge(
         catalog,
-        recent_anime_ids,
+        recent_anime_ids_by_category,
         recent_matchup_pairs,
         random_source,
-        series_displayable_ids,
+        series_representative_ids,
         rating_context,
-        series_root_popularity_ranks,
-    )
-
-    if challenge is not None:
-        return challenge
-
-    challenge = try_generate_challenge(
-        catalog,
-        set(),
-        recent_matchup_pairs,
-        random_source,
-        series_displayable_ids,
-        rating_context,
-        series_root_popularity_ranks,
+        series_representative_popularity_ranks,
     )
 
     if challenge is not None:
         return challenge
 
     raise RuntimeError(
-        "The catalog could not produce a complete valid challenge, even after "
-        "relaxing recent-anime avoidance. Factual validity, verified More "
-        "Episodes display roots, unique MAL IDs, and "
-        "recent exact-matchup prevention remain required."
+        "The catalog could not produce a complete valid challenge. Factual "
+        "validity, canonical More Episodes representatives, category-specific "
+        "recent-anime cooldowns, unique MAL IDs, and recent exact-matchup "
+        "prevention remain required."
     )
 
 
@@ -547,26 +543,45 @@ def load_stored_challenge(
 
 
 def load_series_display_metadata(catalog, database_path):
-    """Keep verified episodic entries and the displayed roots' popularity ranks."""
+    """Return selectable canonical series IDs and their popularity ranks."""
     episodic_ids = [
         anime["mal_id"]
         for anime in catalog
         if anime.get("type") in EPISODIC_MEDIA_TYPES
         and anime.get("series_episodes") is not None
     ]
-    roots = load_series_display_roots(episodic_ids, database_path)
-    displayable_ids = {
+    representatives = load_series_representatives(episodic_ids, database_path)
+    representative_ids = {
         anime_id
-        for anime_id, root in roots.items()
-        if root is not None
+        for anime_id, representative in representatives.items()
+        if representative is not None
+        and representative["mal_id"] == anime_id
     }
     catalog_by_id = {anime["mal_id"]: anime for anime in catalog}
-    root_popularity_ranks = {
-        anime_id: catalog_by_id[root["mal_id"]].get("popularity_rank")
-        for anime_id, root in roots.items()
-        if root is not None
+    representative_popularity_ranks = {
+        anime_id: catalog_by_id[anime_id].get("popularity_rank")
+        for anime_id in representative_ids
     }
-    return displayable_ids, root_popularity_ranks
+    return representative_ids, representative_popularity_ranks
+
+
+def load_recent_category_usage(challenge_date, database_path):
+    recent_by_category = load_recent_category_anime_ids(
+        challenge_date,
+        RECENT_ANIME_DAYS,
+        database_path,
+    )
+    recent_series_ids = recent_by_category.get("More Episodes", set())
+    if recent_series_ids:
+        representatives = load_series_representatives(
+            recent_series_ids,
+            database_path,
+        )
+        recent_by_category["More Episodes"] = {
+            representative["mal_id"] if representative else anime_id
+            for anime_id, representative in representatives.items()
+        }
+    return recent_by_category
 
 
 def generate_history_aware_challenge(
@@ -575,13 +590,11 @@ def generate_history_aware_challenge(
     random_source=None,
 ):
     catalog = load_anime_records(database_path)
-    series_displayable_ids, root_popularity_ranks = load_series_display_metadata(
+    series_representative_ids, representative_popularity_ranks = load_series_display_metadata(
         catalog, database_path
     )
-    recent_anime_ids = load_recent_anime_ids(
-        challenge_date,
-        RECENT_ANIME_DAYS,
-        database_path,
+    recent_anime_ids_by_category = load_recent_category_usage(
+        challenge_date, database_path
     )
     recent_matchup_pairs = load_recent_matchup_pairs(
         challenge_date,
@@ -592,10 +605,10 @@ def generate_history_aware_challenge(
     return generate_challenge(
         catalog,
         random_source,
-        recent_anime_ids,
+        recent_anime_ids_by_category,
         recent_matchup_pairs,
-        series_displayable_ids,
-        series_root_popularity_ranks=root_popularity_ranks,
+        series_representative_ids,
+        series_representative_popularity_ranks=representative_popularity_ranks,
     )
 
 
@@ -620,13 +633,11 @@ def generate_challenge_candidates(
         random_source = random
 
     catalog = load_anime_records(database_path)
-    series_displayable_ids, root_popularity_ranks = load_series_display_metadata(
+    series_representative_ids, representative_popularity_ranks = load_series_display_metadata(
         catalog, database_path
     )
-    recent_anime_ids = load_recent_anime_ids(
-        challenge_date,
-        RECENT_ANIME_DAYS,
-        database_path,
+    recent_anime_ids_by_category = load_recent_category_usage(
+        challenge_date, database_path
     )
     recent_matchup_pairs = load_recent_matchup_pairs(
         challenge_date,
@@ -648,11 +659,11 @@ def generate_challenge_candidates(
         challenge = generate_challenge(
             catalog,
             random_source,
-            recent_anime_ids,
+            recent_anime_ids_by_category,
             recent_matchup_pairs,
-            series_displayable_ids,
+            series_representative_ids,
             rating_context=rating_context,
-            series_root_popularity_ranks=root_popularity_ranks,
+            series_representative_popularity_ranks=representative_popularity_ranks,
         )
         signature = challenge_signature(challenge)
 
@@ -723,7 +734,7 @@ def serialize_public_challenge(
         if category["name"] == "More Episodes"
         for anime in category["anime"]
     ]
-    series_roots = load_series_display_roots(
+    series_representatives = load_series_representatives(
         series_anime_ids,
         database_path,
     )
@@ -736,9 +747,13 @@ def serialize_public_challenge(
             image_url = anime.get("image_url")
 
             if category["name"] == "More Episodes":
-                root = series_roots[anime["mal_id"]]
-                title = root["title"] if root else "Series root unavailable"
-                image_url = root["image_url"] if root else None
+                representative = series_representatives[anime["mal_id"]]
+                title = (
+                    representative["title"]
+                    if representative
+                    else "Series representative unavailable"
+                )
+                image_url = representative["image_url"] if representative else None
 
             public_anime.append(
                 {
@@ -788,6 +803,15 @@ def validate_public_challenge(
         for anime in load_anime_records(database_path)
         if anime.get("mal_id") is not None
     }
+    more_episodes = categories_by_name.get("More Episodes")
+    series_representatives = load_series_representatives(
+        [
+            anime.get("mal_id")
+            for anime in (more_episodes.get("anime") or [])
+            if isinstance(anime, dict) and anime.get("mal_id") is not None
+        ] if more_episodes else [],
+        database_path,
+    )
     seen_ids = set()
 
     for rule in CATEGORY_RULES:
@@ -824,6 +848,16 @@ def validate_public_challenge(
                 and anime.get("popularity_rank") is None
             ):
                 errors.append("More Popular entries require popularity_rank")
+            if rule["name"] == "More Episodes":
+                representative = series_representatives.get(mal_id)
+                if representative is None:
+                    errors.append(
+                        f"MAL ID {mal_id} has no verified series representative"
+                    )
+                elif representative["mal_id"] != mal_id:
+                    errors.append(
+                        f"MAL ID {mal_id} is not its canonical series representative"
+                    )
 
         for anime_a, anime_b in zip(anime_order, anime_order[1:]):
             value_a = get_comparison_value(anime_a, rule["metric"])

@@ -178,6 +178,7 @@ ON CONFLICT(mal_id) DO UPDATE SET
 
 EPISODIC_MEDIA_TYPES = {"tv", "ona", "ova", "special", "tv_special"}
 MAINLINE_RELATION_TYPES = {"prequel", "sequel"}
+DERIVATIVE_CHILD_RELATION_TYPES = {"parent_story", "full_story"}
 FAILURE_STATE_KEY = "catalog_failures_initialized"
 
 
@@ -558,12 +559,8 @@ def load_mainline_neighbor_ids(anime_id, database_path=DATABASE_PATH):
     return {row[0] for row in rows}
 
 
-def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
-    """Find a unique first entry for each stored prequel/sequel component.
-
-    None means the relationship graph is incomplete, cyclic, or has multiple
-    possible roots. In those cases the UI must not claim a season is the root.
-    """
+def load_series_representatives(anime_ids, database_path=DATABASE_PATH):
+    """Find the first-released mainline episodic entry in each verified series."""
     anime_ids = list(dict.fromkeys(anime_ids))
 
     if not anime_ids:
@@ -576,19 +573,52 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
     relation_placeholders = ", ".join("?" for _ in relation_types)
     anime_cache = {}
     relation_cache = {}
-    resolved_roots = {}
+    derivative_cache = {}
+    resolved_representatives = {}
+
+    def release_order_key(value):
+        parts = str(value or "").split("-")
+        if not 1 <= len(parts) <= 3 or any(not part.isdigit() for part in parts):
+            return None
+        year = int(parts[0])
+        month = int(parts[1]) if len(parts) >= 2 else 1
+        day = int(parts[2]) if len(parts) == 3 else 1
+        try:
+            date(year, month, day)
+        except ValueError:
+            return None
+        return year, month, day
 
     def get_anime(anime_id):
         if anime_id not in anime_cache:
             anime_cache[anime_id] = connection.execute(
                 """
-                SELECT mal_id, title, image_url, type, relations_fetched
+                SELECT mal_id, title, image_url, type, release_date,
+                       relations_fetched
                 FROM anime
                 WHERE mal_id = ?
                 """,
                 (anime_id,),
             ).fetchone()
         return anime_cache[anime_id]
+
+    def is_derivative_child(anime_id):
+        if anime_id not in derivative_cache:
+            placeholders = ", ".join(
+                "?" for _ in DERIVATIVE_CHILD_RELATION_TYPES
+            )
+            relation_types = tuple(sorted(DERIVATIVE_CHILD_RELATION_TYPES))
+            derivative_cache[anime_id] = connection.execute(
+                f"""
+                SELECT 1
+                FROM anime_relations
+                WHERE source_mal_id = ?
+                  AND relation_type IN ({placeholders})
+                LIMIT 1
+                """,
+                (anime_id, *relation_types),
+            ).fetchone() is not None
+        return derivative_cache[anime_id]
 
     def get_mainline_relations(anime_id):
         if anime_id not in relation_cache:
@@ -605,7 +635,7 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
 
     try:
         for anime_id in anime_ids:
-            if anime_id in resolved_roots:
+            if anime_id in resolved_representatives:
                 continue
 
             to_visit = [anime_id]
@@ -634,7 +664,7 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
                     to_visit.append(source_id)
                     to_visit.append(target_id)
 
-            root = None
+            representative = None
 
             if complete:
                 predecessors = {member_id: set() for member_id in component}
@@ -649,55 +679,65 @@ def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
                     predecessors[later_id].add(earlier_id)
                     successors[earlier_id].add(later_id)
 
-                first_entries = [
-                    member_id
-                    for member_id, earlier_ids in predecessors.items()
-                    if not earlier_ids
-                ]
-
-                episodic_ids = {
+                mainline_episodic_ids = {
                     member_id
                     for member_id in component
                     if get_anime(member_id)["type"] in EPISODIC_MEDIA_TYPES
+                    and not is_derivative_child(member_id)
                 }
-                episodic_first_entries = [
+                remaining_predecessors = {
+                    member_id: len(earlier_ids)
+                    for member_id, earlier_ids in predecessors.items()
+                }
+                ready = [
                     member_id
-                    for member_id in episodic_ids
-                    if not (predecessors[member_id] & episodic_ids)
+                    for member_id, earlier_count in remaining_predecessors.items()
+                    if earlier_count == 0
                 ]
+                processed = 0
 
-                if len(episodic_first_entries) == 1:
-                    remaining_predecessors = {
-                        member_id: len(earlier_ids)
-                        for member_id, earlier_ids in predecessors.items()
+                while ready:
+                    current_id = ready.pop()
+                    processed += 1
+
+                    for later_id in successors[current_id]:
+                        remaining_predecessors[later_id] -= 1
+
+                        if remaining_predecessors[later_id] == 0:
+                            ready.append(later_id)
+
+                release_order = []
+                for member_id in mainline_episodic_ids:
+                    anime = get_anime(member_id)
+                    released = release_order_key(anime["release_date"])
+                    if released is None:
+                        complete = False
+                        break
+                    release_order.append((released, member_id))
+
+                if complete and processed == len(component) and release_order:
+                    _, representative_id = min(release_order)
+                    representative_anime = get_anime(representative_id)
+                    representative = {
+                        "mal_id": representative_anime["mal_id"],
+                        "title": representative_anime["title"],
+                        "image_url": representative_anime["image_url"],
                     }
-                    ready = first_entries[:]
-                    processed = 0
-
-                    while ready:
-                        current_id = ready.pop()
-                        processed += 1
-
-                        for later_id in successors[current_id]:
-                            remaining_predecessors[later_id] -= 1
-
-                            if remaining_predecessors[later_id] == 0:
-                                ready.append(later_id)
-
-                    if processed == len(component):
-                        first_anime = get_anime(episodic_first_entries[0])
-                        root = {
-                            "mal_id": first_anime["mal_id"],
-                            "title": first_anime["title"],
-                            "image_url": first_anime["image_url"],
-                        }
 
             for member_id in component:
-                resolved_roots[member_id] = root
+                resolved_representatives[member_id] = representative
     finally:
         connection.close()
 
-    return {anime_id: resolved_roots[anime_id] for anime_id in anime_ids}
+    return {
+        anime_id: resolved_representatives[anime_id]
+        for anime_id in anime_ids
+    }
+
+
+def load_series_display_roots(anime_ids, database_path=DATABASE_PATH):
+    """Backward-compatible alias for first-release series representatives."""
+    return load_series_representatives(anime_ids, database_path)
 
 
 def resolve_and_store_series_episode_count(
@@ -1030,6 +1070,39 @@ def load_recent_anime_ids(challenge_date, recent_days, database_path=DATABASE_PA
         connection.close()
 
     return {row[0] for row in rows}
+
+
+def load_recent_category_anime_ids(
+    challenge_date,
+    recent_days,
+    database_path=DATABASE_PATH,
+):
+    """Load exact MAL IDs used in each category during prior cooldown days."""
+    challenge_date = _parse_challenge_date(challenge_date)
+    earliest_date = (challenge_date - timedelta(days=recent_days)).isoformat()
+    latest_date = challenge_date.isoformat()
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT DISTINCT challenge_anime.category, challenge_anime.mal_id
+            FROM challenge_anime
+            JOIN challenge_runs
+                ON challenge_runs.id = challenge_anime.challenge_id
+            WHERE challenge_runs.challenge_date >= ?
+              AND challenge_runs.challenge_date < ?
+            """,
+            (earliest_date, latest_date),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    recent_by_category = {}
+    for category, mal_id in rows:
+        recent_by_category.setdefault(category, set()).add(mal_id)
+    return recent_by_category
 
 
 def load_challenge_record(

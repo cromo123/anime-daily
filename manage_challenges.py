@@ -17,7 +17,7 @@ from database import (
     list_challenge_runs,
     load_challenge_record,
     load_challenge_player_activity,
-    load_series_display_roots,
+    load_series_representatives,
     set_challenge_publication_state,
 )
 
@@ -216,7 +216,7 @@ def inspect_challenge(challenge_date):
         f"{challenge_date}  challenge #{record['id']}  "
         f"{record['publication_state']}"
     )
-    roots = load_series_display_roots(
+    representatives = load_series_representatives(
         [
             anime["mal_id"]
             for category in challenge
@@ -229,11 +229,19 @@ def inspect_challenge(challenge_date):
         print(f"\n{category['name']}")
         for position, anime in enumerate(category["anime"], start=1):
             metric = category["metric"]
-            display = roots.get(anime["mal_id"]) if category["name"] == "More Episodes" else None
+            display = (
+                representatives.get(anime["mal_id"])
+                if category["name"] == "More Episodes"
+                else None
+            )
             display_text = (
-                f"display root MAL {display['mal_id']} | {display['title']}"
+                f"series representative MAL {display['mal_id']} | {display['title']}"
                 if display
-                else f"display title {anime['title']}"
+                else (
+                    "series representative unavailable"
+                    if category["name"] == "More Episodes"
+                    else f"display title {anime['title']}"
+                )
             )
             print(
                 f"{position}. MAL {anime['mal_id']} | {display_text} | "
