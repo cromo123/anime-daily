@@ -54,11 +54,70 @@
         </button>
       </section>
 
+      <section id="landing-screen" class="landing-screen" hidden>
+        <div class="landing-hero">
+          <p class="eyebrow">Today’s challenge</p>
+          <h1>AniMoredle</h1>
+          <time id="landing-challenge-date" class="landing-date"></time>
+          <p class="landing-summary">
+            Four categories. Twenty comparisons. Pick which anime has more.
+          </p>
+          <button id="landing-start-button" class="primary-button landing-cta" type="button">
+            Start Daily Challenge
+          </button>
+        </div>
+
+        <div class="landing-info-grid">
+          <section class="landing-panel" aria-labelledby="category-preview-title">
+            <p class="eyebrow">Four rounds</p>
+            <h2 id="category-preview-title">Today’s categories</h2>
+            <ul class="category-preview-list">
+              <li>Higher Score</li>
+              <li>More Popular</li>
+              <li>More Episodes</li>
+              <li>More Recent</li>
+            </ul>
+          </section>
+
+          <section class="landing-panel" aria-labelledby="how-it-works-title">
+            <p class="eyebrow">Quick rules</p>
+            <h2 id="how-it-works-title">How it works</h2>
+            <ol class="how-it-works-list">
+              <li>Pick between two anime</li>
+              <li>See the real value after answering</li>
+              <li>Score up to 20 points</li>
+            </ol>
+          </section>
+        </div>
+      </section>
+
       <section id="round-intro" class="round-intro" aria-live="polite" hidden>
         <p id="intro-round" class="intro-round">Round 1 / 4</p>
         <h1 id="intro-title">Higher Score</h1>
         <p id="intro-question">Which anime has the higher score?</p>
         <span class="intro-line" aria-hidden="true"></span>
+      </section>
+
+      <section id="round-complete-screen" class="round-complete-screen" aria-live="polite" hidden>
+        <div class="round-complete-card">
+          <p id="round-complete-label" class="intro-round">Round 1 complete</p>
+          <h1 id="round-complete-category">Higher Score</h1>
+          <p id="round-complete-score" class="round-complete-score">0 / 5</p>
+
+          <div class="next-category-preview">
+            <p class="eyebrow">Next up</p>
+            <h2 id="next-category-name">More Popular</h2>
+            <p id="next-category-question">Which anime is more popular?</p>
+          </div>
+
+          <aside class="round-transition-ad-slot" aria-label="Advertisement placeholder">
+            <span>ADVERTISEMENT</span>
+          </aside>
+
+          <button id="round-continue-button" class="primary-button" type="button">
+            Continue to More Popular
+          </button>
+        </div>
       </section>
 
       <section id="game-screen" class="game-screen" hidden>
@@ -89,9 +148,6 @@
           Retry saving result
         </button>
 
-        <aside class="promo-slot" aria-label="Future promotional space">
-          <span>PROMO</span>
-        </aside>
       </section>
 
       <section id="results-screen" class="results-screen" hidden>
@@ -190,5 +246,9 @@
         </p>
       </noscript>
     </main>
+
+    <aside id="desktop-ad-slot" class="desktop-ad-rail" aria-label="Advertisement placeholder">
+      <span>ADVERTISEMENT</span>
+    </aside>
   </body>
 </html>

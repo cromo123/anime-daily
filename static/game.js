@@ -10,10 +10,15 @@ const PLAYTEST_MODE =
   new URLSearchParams(window.location.search).get("playtest") === "1";
 const {
   applyLoadedChallenge,
+  createSingleUseGate,
   createRequestGate,
+  dailyChallengeButtonLabel,
   findResumePosition,
   isPublicHistoryDate,
+  prepareNextRound,
   responseMatchesRequest,
+  roundTransitionDetails,
+  shouldShowTodayLanding,
 } = window.AniMoredleChallengeState;
 
 const state = {
@@ -47,6 +52,7 @@ const state = {
 
 let introSequence = 0;
 const navigationRequests = createRequestGate();
+const roundContinueGate = createSingleUseGate();
 let audioContext = null;
 const feedbackSounds = new Set();
 const countingSounds = new Set();
@@ -59,7 +65,9 @@ const elements = {
   brand: document.querySelector(".brand"),
   loadingScreen: document.querySelector("#loading-screen"),
   errorScreen: document.querySelector("#error-screen"),
+  landingScreen: document.querySelector("#landing-screen"),
   roundIntro: document.querySelector("#round-intro"),
+  roundCompleteScreen: document.querySelector("#round-complete-screen"),
   gameScreen: document.querySelector("#game-screen"),
   resultsScreen: document.querySelector("#results-screen"),
   reviewScreen: document.querySelector("#review-screen"),
@@ -72,6 +80,12 @@ const elements = {
   introRound: document.querySelector("#intro-round"),
   introTitle: document.querySelector("#intro-title"),
   introQuestion: document.querySelector("#intro-question"),
+  roundCompleteLabel: document.querySelector("#round-complete-label"),
+  roundCompleteCategory: document.querySelector("#round-complete-category"),
+  roundCompleteScore: document.querySelector("#round-complete-score"),
+  nextCategoryName: document.querySelector("#next-category-name"),
+  nextCategoryQuestion: document.querySelector("#next-category-question"),
+  roundContinueButton: document.querySelector("#round-continue-button"),
   categoryCount: document.querySelector("#category-count"),
   categoryName: document.querySelector("#category-name"),
   categoryQuestion: document.querySelector("#category-question"),
@@ -105,12 +119,15 @@ const elements = {
   archiveResultCopy: document.querySelector("#archive-result-copy"),
   practiceButton: document.querySelector("#practice-button"),
   archiveReturnButton: document.querySelector("#archive-return-button"),
+  landingChallengeDate: document.querySelector("#landing-challenge-date"),
+  landingStartButton: document.querySelector("#landing-start-button"),
 };
 
 function showScreen(screen) {
   state.visibleScreen = screen;
   if (
     screen === elements.roundIntro ||
+    screen === elements.roundCompleteScreen ||
     screen === elements.gameScreen ||
     screen === elements.resultsScreen ||
     screen === elements.reviewScreen
@@ -120,7 +137,9 @@ function showScreen(screen) {
   for (const candidate of [
     elements.loadingScreen,
     elements.errorScreen,
+    elements.landingScreen,
     elements.roundIntro,
+    elements.roundCompleteScreen,
     elements.gameScreen,
     elements.resultsScreen,
     elements.reviewScreen,
@@ -264,6 +283,19 @@ function setActiveNavigation(activeView) {
   elements.archiveNavButton.toggleAttribute("aria-current", !todayIsActive);
 }
 
+function showTodayLanding() {
+  elements.landingChallengeDate.dateTime = state.challenge.challenge_date;
+  elements.landingChallengeDate.textContent = formatDate(
+    state.challenge.challenge_date,
+  );
+  elements.landingStartButton.textContent = dailyChallengeButtonLabel(
+    state.selections.length,
+  );
+  setActiveNavigation("today");
+  showScreen(elements.landingScreen);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 function restoreTodayView() {
   const today = localDateString();
   if (
@@ -282,7 +314,13 @@ function restoreTodayView() {
   elements.challengeLabel.textContent = PLAYTEST_MODE ? "PLAYTEST" : "Daily challenge";
   elements.challengeDate.textContent = formatDate(state.challenge.challenge_date);
   setActiveNavigation("today");
-  showScreen(state.lastGameplayScreen || elements.gameScreen);
+  if (shouldShowTodayLanding(state, today, PLAYTEST_MODE)) {
+    showTodayLanding();
+  } else if (state.completion) {
+    showScreen(elements.resultsScreen);
+  } else {
+    showScreen(state.lastGameplayScreen || elements.gameScreen);
+  }
 }
 
 function validateChallenge(challenge) {
@@ -511,6 +549,8 @@ async function loadChallenge(challengeDate = "today", generateNewPlaytest = fals
         total_questions: TOTAL_COMPARISONS,
         replay: false,
       });
+    } else if (mode === "today") {
+      showTodayLanding();
     } else {
       showRoundIntro();
     }
@@ -565,6 +605,59 @@ async function showRoundIntro() {
 
   showScreen(elements.gameScreen);
   renderComparison();
+}
+
+function showRoundComplete() {
+  const details = roundTransitionDetails(
+    state.challenge,
+    state.roundIndex,
+    state.roundScore,
+    COMPARISONS_PER_ROUND,
+  );
+  if (!details) return;
+
+  elements.roundCompleteLabel.textContent = `Round ${details.completedRoundNumber} complete`;
+  elements.roundCompleteCategory.textContent = details.completedCategory;
+  elements.roundCompleteScore.textContent = details.completedScore;
+  elements.nextCategoryName.textContent = details.nextCategory;
+  elements.nextCategoryQuestion.textContent = details.nextQuestion;
+  elements.roundContinueButton.textContent = `Continue to ${details.nextCategory}`;
+  elements.roundContinueButton.disabled = false;
+  roundContinueGate.reset();
+  state.transitioning = false;
+  showScreen(elements.roundCompleteScreen);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function continueToNextRound() {
+  if (
+    state.visibleScreen !== elements.roundCompleteScreen ||
+    !roundContinueGate.enter()
+  ) {
+    return;
+  }
+
+  elements.roundContinueButton.disabled = true;
+  state.transitioning = true;
+  if (!prepareNextRound(state, TOTAL_ROUNDS)) {
+    state.transitioning = false;
+    elements.roundContinueButton.disabled = false;
+    roundContinueGate.reset();
+    return;
+  }
+  showRoundIntro();
+}
+
+function startOrResumeTodayChallenge() {
+  if (
+    state.lastGameplayScreen === elements.roundCompleteScreen &&
+    state.comparisonIndex === COMPARISONS_PER_ROUND - 1 &&
+    state.answer
+  ) {
+    showRoundComplete();
+    return;
+  }
+  showRoundIntro();
 }
 
 function createCover(anime) {
@@ -1337,13 +1430,7 @@ async function advanceGame() {
   if (!await animateRoundExit()) return;
 
   if (state.roundIndex < TOTAL_ROUNDS - 1) {
-    state.roundIndex += 1;
-    state.comparisonIndex = 0;
-    state.roundScore = 0;
-    state.answer = null;
-    state.revealPhase = null;
-    state.transitioning = false;
-    showRoundIntro();
+    showRoundComplete();
   } else {
     if (PLAYTEST_MODE) {
       showResults();
@@ -1368,6 +1455,8 @@ function resetGame() {
   state.selections = [];
   state.reviewEntries = [];
   state.completion = null;
+  roundContinueGate.reset();
+  elements.roundContinueButton.disabled = false;
   elements.reviewList.replaceChildren();
   elements.retryCompletionButton.hidden = true;
 }
@@ -1392,21 +1481,9 @@ elements.replayButton.addEventListener("click", replayGame);
 elements.newPlaytestButton.addEventListener("click", () =>
   loadChallenge("playtest", true),
 );
-elements.todayNavButton.addEventListener("click", () => {
-  if (
-    state.visibleScreen !== elements.archiveScreen &&
-    state.visibleScreen !== elements.archiveResultScreen &&
-    state.challenge &&
-    (PLAYTEST_MODE || (
-      !state.playingArchivedChallenge &&
-      state.challenge.challenge_date === localDateString()
-    ))
-  ) {
-    restoreTodayView();
-    return;
-  }
-  loadChallenge(PLAYTEST_MODE ? "playtest" : "today");
-});
+elements.landingStartButton.addEventListener("click", startOrResumeTodayChallenge);
+elements.roundContinueButton.addEventListener("click", continueToNextRound);
+elements.todayNavButton.addEventListener("click", restoreTodayView);
 elements.archiveNavButton.addEventListener("click", () => loadArchive());
 elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
 elements.nextMonthButton.addEventListener("click", () => changeArchiveMonth(1));
@@ -1415,6 +1492,20 @@ elements.practiceButton.addEventListener("click", () =>
 );
 elements.archiveReturnButton.addEventListener("click", () => loadArchive());
 elements.resultsArchiveButton.addEventListener("click", () => loadArchive());
+elements.brand.addEventListener("click", (event) => {
+  if (
+    PLAYTEST_MODE ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+  event.preventDefault();
+  restoreTodayView();
+});
 window.addEventListener("pageshow", () => {
   resyncOfficialProgress();
 });

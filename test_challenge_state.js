@@ -3,10 +3,15 @@
 const assert = require("node:assert/strict");
 const {
   applyLoadedChallenge,
+  createSingleUseGate,
   createRequestGate,
+  dailyChallengeButtonLabel,
   findResumePosition,
   isPublicHistoryDate,
+  prepareNextRound,
   responseMatchesRequest,
+  roundTransitionDetails,
+  shouldShowTodayLanding,
 } = require("./static/challenge_state.js");
 
 const categoryNames = [
@@ -23,6 +28,7 @@ function challenge(date, titlePrefix, firstId) {
     comparison_stats: [{ category: "Higher Score", comparison_position: 1 }],
     categories: categoryNames.map((name, categoryIndex) => ({
       name,
+      question: `Question for ${name}`,
       anime: Array.from({ length: 6 }, (_, animeIndex) => ({
         mal_id: firstId + categoryIndex * 10 + animeIndex,
         title: `${titlePrefix} ${categoryIndex + 1}-${animeIndex + 1}`,
@@ -96,6 +102,25 @@ assert.equal(state.answer, null);
 assert.equal(state.completion, null);
 assert.equal(state.playingArchivedChallenge, false);
 assert.equal(state.challengeRequestDate, "today");
+assert.equal(shouldShowTodayLanding(state, "2026-09-21", false), true);
+assert.equal(dailyChallengeButtonLabel(state.selections.length), "Start Daily Challenge");
+
+state.selections.push({ category: "Higher Score", comparison_position: 1 });
+state.totalScore = 1;
+state.roundIndex = 0;
+state.comparisonIndex = 1;
+assert.equal(shouldShowTodayLanding(state, "2026-09-21", false), true);
+assert.equal(dailyChallengeButtonLabel(state.selections.length), "Resume Daily Challenge");
+assert.equal(state.totalScore, 1);
+assert.equal(state.comparisonIndex, 1);
+
+state.completion = { verified_score: 20 };
+assert.equal(shouldShowTodayLanding(state, "2026-09-21", false), false);
+state.completion = null;
+state.playingArchivedChallenge = true;
+assert.equal(shouldShowTodayLanding(state, "2026-09-21", false), false);
+state.playingArchivedChallenge = false;
+assert.equal(shouldShowTodayLanding(state, "2026-09-21", true), false);
 
 const answers = [
   { category: "Higher Score", comparison_position: 1, correct: true },
@@ -128,5 +153,98 @@ assert.equal(responseMatchesRequest(archive, "today", "2026-09-21", false), fals
 assert.equal(responseMatchesRequest(archive, "2026-09-19", "2026-09-21", false), true);
 assert.equal(isPublicHistoryDate("2026-09-18", "2026-09-19"), false);
 assert.equal(isPublicHistoryDate("2026-09-19", "2026-09-19"), true);
+
+const continueGate = createSingleUseGate();
+assert.equal(continueGate.enter(), true);
+assert.equal(continueGate.enter(), false);
+continueGate.reset();
+assert.equal(continueGate.enter(), true);
+
+const transitionState = {
+  roundIndex: 0,
+  comparisonIndex: 4,
+  roundScore: 4,
+  totalScore: 4,
+  answer: { correct: true },
+  revealPhase: "resolved",
+  transitioning: true,
+  selections: Array.from({ length: 5 }, (_, index) => ({
+    category: "Higher Score",
+    comparison_position: index + 1,
+  })),
+};
+assert.equal(prepareNextRound(transitionState, 4), true);
+assert.equal(transitionState.roundIndex, 1);
+assert.equal(transitionState.comparisonIndex, 0);
+assert.equal(transitionState.roundScore, 0);
+assert.equal(transitionState.totalScore, 4);
+assert.equal(transitionState.selections.length, 5);
+assert.equal(transitionState.answer, null);
+assert.equal(transitionState.revealPhase, null);
+assert.equal(transitionState.transitioning, false);
+
+transitionState.comparisonIndex = 4;
+transitionState.roundScore = 3;
+transitionState.answer = { correct: false };
+transitionState.revealPhase = "resolved";
+transitionState.transitioning = true;
+assert.equal(prepareNextRound(transitionState, 4), true);
+assert.equal(transitionState.roundIndex, 2);
+assert.equal(transitionState.comparisonIndex, 0);
+assert.equal(transitionState.roundScore, 0);
+assert.equal(transitionState.totalScore, 4);
+
+transitionState.comparisonIndex = 4;
+transitionState.roundScore = 5;
+transitionState.answer = { correct: true };
+transitionState.revealPhase = "resolved";
+transitionState.transitioning = true;
+assert.equal(prepareNextRound(transitionState, 4), true);
+assert.equal(transitionState.roundIndex, 3);
+assert.equal(transitionState.comparisonIndex, 0);
+assert.equal(transitionState.roundScore, 0);
+assert.equal(transitionState.totalScore, 4);
+
+transitionState.comparisonIndex = 4;
+transitionState.roundScore = 5;
+assert.equal(prepareNextRound(transitionState, 4), false);
+assert.equal(transitionState.roundIndex, 3);
+assert.equal(transitionState.comparisonIndex, 4);
+assert.equal(transitionState.roundScore, 5);
+
+assert.deepEqual(roundTransitionDetails(today, 0, 4, 5), {
+  completedRoundNumber: 1,
+  completedCategory: "Higher Score",
+  completedScore: "4 / 5",
+  nextCategory: "More Popular",
+  nextQuestion: "Question for More Popular",
+});
+assert.equal(roundTransitionDetails(today, 1, 3, 5).nextCategory, "More Episodes");
+assert.equal(roundTransitionDetails(today, 2, 5, 5).nextCategory, "More Recent");
+assert.equal(roundTransitionDetails(today, 3, 5, 5), null);
+
+const completedFirstRound = Array.from({ length: 5 }, (_, index) => ({
+  category: "Higher Score",
+  comparison_position: index + 1,
+  correct: index < 4,
+}));
+assert.deepEqual(findResumePosition(today, completedFirstRound), {
+  complete: false,
+  roundIndex: 1,
+  comparisonIndex: 0,
+  roundScore: 0,
+});
+assert.deepEqual(
+  findResumePosition(today, [
+    ...completedFirstRound,
+    { category: "More Popular", comparison_position: 1, correct: true },
+  ]),
+  {
+    complete: false,
+    roundIndex: 1,
+    comparisonIndex: 1,
+    roundScore: 1,
+  },
+);
 
 console.log("challenge navigation state checks passed");
