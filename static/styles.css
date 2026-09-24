@@ -367,11 +367,30 @@ button {
   letter-spacing: 0.18em;
 }
 
+.results-ad-slot {
+  display: grid;
+  width: min(100%, 28rem);
+  min-height: 5.5rem;
+  margin: 0 0 1.25rem;
+  place-items: center;
+  color: var(--muted);
+  background: rgba(17, 22, 37, 0.62);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-medium);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
 .round-complete-card > .primary-button {
   width: 100%;
 }
 
 .desktop-ad-rail {
+  display: none;
+}
+
+.mobile-ad-slot {
   display: none;
 }
 
@@ -1189,6 +1208,55 @@ button {
 }
 
 @media (max-width: 760px) {
+  body.has-mobile-ad {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-ad-slot {
+    position: fixed;
+    right: max(0.65rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+    left: max(0.65rem, env(safe-area-inset-left, 0px));
+    z-index: 20;
+    display: flex;
+    min-height: 4.25rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    background: rgba(17, 22, 37, 0.97);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-medium);
+    box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.42);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.18em;
+  }
+
+  .mobile-ad-slot button {
+    position: absolute;
+    top: 50%;
+    right: 0.35rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+  }
+
+  .mobile-ad-slot button:hover,
+  .mobile-ad-slot button:focus-visible {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+    outline: 2px solid var(--cyan);
+    outline-offset: -2px;
+  }
+
   .app-shell {
     width: min(100% - 1.25rem, 42rem);
     padding-top: 0.75rem;

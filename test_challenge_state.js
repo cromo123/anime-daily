@@ -11,6 +11,7 @@ const {
   prepareNextRound,
   responseMatchesRequest,
   roundTransitionDetails,
+  shouldShowMobileAd,
   shouldShowTodayLanding,
 } = require("./static/challenge_state.js");
 
@@ -222,6 +223,16 @@ assert.deepEqual(roundTransitionDetails(today, 0, 4, 5), {
 assert.equal(roundTransitionDetails(today, 1, 3, 5).nextCategory, "More Episodes");
 assert.equal(roundTransitionDetails(today, 2, 5, 5).nextCategory, "More Recent");
 assert.equal(roundTransitionDetails(today, 3, 5, 5), null);
+
+assert.equal(shouldShowMobileAd("landing", false, false), true);
+assert.equal(shouldShowMobileAd("game", false, false), true);
+assert.equal(shouldShowMobileAd("transition", false, false), false);
+assert.equal(shouldShowMobileAd("results", false, false), false);
+assert.equal(shouldShowMobileAd("loading", false, false), false);
+assert.equal(shouldShowMobileAd("error", false, false), false);
+assert.equal(shouldShowMobileAd("archive", false, false), false);
+assert.equal(shouldShowMobileAd("landing", true, false), false);
+assert.equal(shouldShowMobileAd("game", false, true), false);
 
 const completedFirstRound = Array.from({ length: 5 }, (_, index) => ({
   category: "Higher Score",

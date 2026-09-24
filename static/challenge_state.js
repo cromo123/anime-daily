@@ -84,6 +84,14 @@
     };
   }
 
+  function shouldShowMobileAd(screenName, dismissed, playtestMode) {
+    return Boolean(
+      !dismissed &&
+      !playtestMode &&
+      (screenName === "landing" || screenName === "game"),
+    );
+  }
+
   function applyLoadedChallenge(state, challenge, context) {
     state.challenge = challenge;
     state.roundIndex = 0;
@@ -147,6 +155,7 @@
     prepareNextRound,
     responseMatchesRequest,
     roundTransitionDetails,
+    shouldShowMobileAd,
     shouldShowTodayLanding,
   };
 });

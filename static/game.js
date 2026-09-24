@@ -18,6 +18,7 @@ const {
   prepareNextRound,
   responseMatchesRequest,
   roundTransitionDetails,
+  shouldShowMobileAd,
   shouldShowTodayLanding,
 } = window.AniMoredleChallengeState;
 
@@ -51,6 +52,7 @@ const state = {
 };
 
 let introSequence = 0;
+let mobileAdDismissed = false;
 const navigationRequests = createRequestGate();
 const roundContinueGate = createSingleUseGate();
 let audioContext = null;
@@ -73,6 +75,11 @@ const elements = {
   reviewScreen: document.querySelector("#review-screen"),
   archiveScreen: document.querySelector("#archive-screen"),
   archiveResultScreen: document.querySelector("#archive-result-screen"),
+  desktopAdSlot: document.querySelector("#desktop-ad-slot"),
+  mobileAdSlot: document.querySelector("#mobile-ad-slot"),
+  mobileAdDismiss: document.querySelector("#mobile-ad-dismiss"),
+  resultsAdSlot: document.querySelector("#results-ad-slot"),
+  roundTransitionAdSlot: document.querySelector(".round-transition-ad-slot"),
   challengeDate: document.querySelector("#challenge-date"),
   challengeLabel: document.querySelector("#challenge-label"),
   todayNavButton: document.querySelector("#today-nav-button"),
@@ -123,6 +130,30 @@ const elements = {
   landingStartButton: document.querySelector("#landing-start-button"),
 };
 
+function adScreenName(screen) {
+  if (screen === elements.landingScreen) return "landing";
+  if (screen === elements.gameScreen) return "game";
+  if (screen === elements.roundCompleteScreen) return "transition";
+  if (screen === elements.resultsScreen) return "results";
+  if (screen === elements.loadingScreen) return "loading";
+  if (screen === elements.errorScreen) return "error";
+  return "other";
+}
+
+function updateAdVisibility(screen) {
+  const showMobileAd = shouldShowMobileAd(
+    adScreenName(screen),
+    mobileAdDismissed,
+    PLAYTEST_MODE,
+  );
+  elements.mobileAdSlot.hidden = !showMobileAd;
+  document.body.classList.toggle("has-mobile-ad", showMobileAd);
+  elements.desktopAdSlot.hidden = PLAYTEST_MODE;
+  elements.roundTransitionAdSlot.hidden = PLAYTEST_MODE;
+  elements.resultsAdSlot.hidden =
+    PLAYTEST_MODE || state.playingArchivedChallenge;
+}
+
 function showScreen(screen) {
   state.visibleScreen = screen;
   if (
@@ -148,6 +179,13 @@ function showScreen(screen) {
   ]) {
     candidate.hidden = candidate !== screen;
   }
+  updateAdVisibility(screen);
+}
+
+function dismissMobileAd() {
+  mobileAdDismissed = true;
+  elements.mobileAdSlot.hidden = true;
+  document.body.classList.remove("has-mobile-ad");
 }
 
 function prefersReducedMotion() {
@@ -1483,6 +1521,7 @@ elements.newPlaytestButton.addEventListener("click", () =>
 );
 elements.landingStartButton.addEventListener("click", startOrResumeTodayChallenge);
 elements.roundContinueButton.addEventListener("click", continueToNextRound);
+elements.mobileAdDismiss.addEventListener("click", dismissMobileAd);
 elements.todayNavButton.addEventListener("click", restoreTodayView);
 elements.archiveNavButton.addEventListener("click", () => loadArchive());
 elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
