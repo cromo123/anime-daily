@@ -326,6 +326,21 @@ def frontend():
     return FileResponse(STATIC_DIRECTORY / "index.html")
 
 
+@app.get("/about", include_in_schema=False)
+def about_page():
+    return FileResponse(STATIC_DIRECTORY / "about.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+def privacy_page():
+    return FileResponse(STATIC_DIRECTORY / "privacy.html")
+
+
+@app.get("/contact", include_in_schema=False)
+def contact_page():
+    return FileResponse(STATIC_DIRECTORY / "contact.html")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
