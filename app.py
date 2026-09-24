@@ -341,6 +341,11 @@ def contact_page():
     return FileResponse(STATIC_DIRECTORY / "contact.html")
 
 
+@app.get("/ads.txt", include_in_schema=False)
+def ads_txt():
+    return FileResponse(STATIC_DIRECTORY / "ads.txt", media_type="text/plain")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
