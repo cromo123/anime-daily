@@ -1,6 +1,5 @@
 """Focused regression checks for dated official challenge loading."""
 
-import shutil
 import sqlite3
 import tempfile
 import unittest
@@ -13,7 +12,8 @@ from fastapi.testclient import TestClient
 
 import app as app_module
 from challenge import load_stored_challenge
-from database import DATABASE_PATH, record_challenge
+from database import record_challenge
+from test_support import create_test_catalog, test_challenge
 
 
 class ArchiveRouteTests(unittest.TestCase):
@@ -22,12 +22,9 @@ class ArchiveRouteTests(unittest.TestCase):
             ignore_cleanup_errors=True
         )
         self.database_path = Path(self.temporary_directory.name) / "game.db"
-        shutil.copyfile(DATABASE_PATH, self.database_path)
-        source_challenge = load_stored_challenge(
-            "2026-09-16", self.database_path
-        )
-        record_challenge(source_challenge, "2026-09-19", self.database_path)
-        record_challenge(source_challenge, "2026-09-20", self.database_path)
+        records = create_test_catalog(self.database_path)
+        for index, day in enumerate(("2026-09-16", "2026-09-19", "2026-09-20")):
+            record_challenge(test_challenge(records, index * 24), day, self.database_path)
         self.original_database_path = app_module.app.state.database_path
         app_module.app.state.database_path = self.database_path
         self.client = TestClient(app_module.app)

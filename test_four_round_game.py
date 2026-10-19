@@ -27,12 +27,12 @@ from challenge_curator import CuratorDecision
 from challenge_ratings import build_rating_context, rate_challenge
 from daily_challenge_flow import DailyChallengeFlow
 from database import (
-    DATABASE_PATH,
     load_anime_records,
-    load_player_results,
     record_challenge,
 )
 from editorial_planner import EditorialBrief
+from candidate_shortlisting import DEFAULT_SHORTLIST_LIMIT, generate_brief_guided_shortlist
+from test_support import create_test_catalog
 
 
 TABLES = (
@@ -57,9 +57,7 @@ class FourRoundGameTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temporary_directory = tempfile.TemporaryDirectory()
         cls.database_path = Path(cls.temporary_directory.name) / "game.db"
-        with closing(sqlite3.connect(DATABASE_PATH)) as source:
-            with closing(sqlite3.connect(cls.database_path)) as target:
-                source.backup(target)
+        create_test_catalog(cls.database_path)
         cls.original_app_path = app.state.database_path
         app.state.database_path = cls.database_path
 
@@ -83,12 +81,19 @@ class FourRoundGameTests(unittest.TestCase):
             self.assertEqual(frontend.status_code, 200)
             self.assertIn("Round 1 / 4", frontend.text)
             self.assertIn("0 / 20", frontend.text)
-            self.assertIn('class="promo-slot"', frontend.text)
+            self.assertNotIn("ad-slot", frontend.text)
+            self.assertNotIn("ADVERTISEMENT", frontend.text)
             game_script = client.get("/static/game.js").text
+            self.assertNotIn("AdSlot", game_script)
+            self.assertNotIn("mobileAd", game_script)
+            stylesheet = client.get("/static/styles.css").text
+            self.assertNotIn("ad-slot", stylesheet)
+            self.assertNotIn("ad-rail", stylesheet)
+            self.assertNotIn("has-mobile-ad", stylesheet)
             self.assertIn("const TOTAL_ROUNDS = 4;", game_script)
             self.assertIn("Full anime series", game_script)
             self.assertNotIn("Longer Runtime", game_script)
-            for challenge_date in ("2026-09-11", "2026-09-12"):
+            for challenge_date in ("2026-09-19", "2026-09-20"):
                 challenge = generate_history_aware_challenge(
                     challenge_date, self.database_path
                 )
@@ -194,25 +199,15 @@ class FourRoundGameTests(unittest.TestCase):
             self.assertTrue(all(result["total_questions"] == 20 for result in history))
             archive = client.get("/archive?year=2026&month=9").json()["challenges"]
             recent = [entry for entry in archive if entry["challenge_date"] in {
-                "2026-09-11", "2026-09-12"
+                "2026-09-19", "2026-09-20"
             }]
             self.assertEqual(len(recent), 2)
             self.assertTrue(all(entry["playable"] for entry in recent))
-            legacy = next(entry for entry in archive if entry["challenge_date"] == "2026-09-03")
-            self.assertEqual(legacy["total_questions"], 25)
-            self.assertFalse(legacy["playable"])
-            self.assertEqual(client.get("/challenge/2026-09-03").status_code, 409)
-
-            with closing(sqlite3.connect(self.database_path)) as connection:
-                old_player = connection.execute(
-                    "SELECT player_id FROM player_results LIMIT 1"
-                ).fetchone()[0]
-            old_result = load_player_results(old_player, self.database_path)[0]
-            self.assertEqual(old_result["score"], 12)
-            self.assertEqual(old_result["total_questions"], 25)
+            self.assertNotIn("2026-09-03", [entry["challenge_date"] for entry in archive])
+            self.assertEqual(client.get("/challenge/2026-09-03").status_code, 404)
 
     def test_playtest_flow_curates_without_persistence(self):
-        before = row_counts(DATABASE_PATH)
+        before = row_counts(self.database_path)
         brief = EditorialBrief(
             target_popularity=92.5,
             target_difficulty=77.5,
@@ -227,16 +222,21 @@ class FourRoundGameTests(unittest.TestCase):
                 summary="Valid selection",
             )
 
-        with patch("daily_challenge_flow.run_editorial_planner", return_value=brief) as planner:
+        def shortlist_in_test_database(**kwargs):
+            return generate_brief_guided_shortlist(database_path=self.database_path, **kwargs)
+
+        with patch("daily_challenge_flow.load_recent_challenge_history", return_value=[]), patch(
+            "daily_challenge_flow.generate_brief_guided_shortlist", side_effect=shortlist_in_test_database
+        ), patch("daily_challenge_flow.run_editorial_planner", return_value=brief) as planner:
             with patch("daily_challenge_flow.run_challenge_curator", side_effect=select_first) as curator:
                 flow = DailyChallengeFlow.for_playtest(date.today().isoformat())
                 selected = flow.kickoff()
         planner.assert_called_once()
         curator.assert_called_once()
-        self.assertEqual(len(flow.state.shortlisted_candidates), 20)
+        self.assertEqual(len(flow.state.shortlisted_candidates), DEFAULT_SHORTLIST_LIMIT)
         self.assertEqual(len(selected), 4)
         self.assertEqual(flow.state.selected_candidate["categories"], selected)
-        self.assertEqual(row_counts(DATABASE_PATH), before)
+        self.assertEqual(row_counts(self.database_path), before)
 
     @unittest.skipUnless(DEV_MODE, "Enable ANIME_DAILY_DEV_MODE for playtest API")
     def test_two_playtests_finish_without_any_history_or_player_writes(self):

@@ -84,12 +84,17 @@
     };
   }
 
-  function shouldShowMobileAd(screenName, dismissed, playtestMode) {
-    return Boolean(
-      !dismissed &&
-      !playtestMode &&
-      (screenName === "landing" || screenName === "game"),
-    );
+  function malEntryUrl(malId) {
+    return Number.isSafeInteger(malId) && malId > 0
+      ? `https://myanimelist.net/anime/${malId}` : null;
+  }
+
+  function initialChallengeDate(requested, localDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(requested || "")) return "today";
+    const parsed = new Date(`${requested}T00:00:00Z`);
+    return !Number.isNaN(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === requested && requested <= localDate
+      ? requested : "today";
   }
 
   function applyLoadedChallenge(state, challenge, context) {
@@ -152,10 +157,11 @@
     dailyChallengeButtonLabel,
     findResumePosition,
     isPublicHistoryDate,
+    initialChallengeDate,
+    malEntryUrl,
     prepareNextRound,
     responseMatchesRequest,
     roundTransitionDetails,
-    shouldShowMobileAd,
     shouldShowTodayLanding,
   };
 });

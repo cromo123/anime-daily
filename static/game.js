@@ -15,10 +15,11 @@ const {
   dailyChallengeButtonLabel,
   findResumePosition,
   isPublicHistoryDate,
+  initialChallengeDate,
+  malEntryUrl,
   prepareNextRound,
   responseMatchesRequest,
   roundTransitionDetails,
-  shouldShowMobileAd,
   shouldShowTodayLanding,
 } = window.AniMoredleChallengeState;
 
@@ -52,7 +53,6 @@ const state = {
 };
 
 let introSequence = 0;
-let mobileAdDismissed = false;
 const navigationRequests = createRequestGate();
 const roundContinueGate = createSingleUseGate();
 let audioContext = null;
@@ -75,11 +75,6 @@ const elements = {
   reviewScreen: document.querySelector("#review-screen"),
   archiveScreen: document.querySelector("#archive-screen"),
   archiveResultScreen: document.querySelector("#archive-result-screen"),
-  desktopAdSlot: document.querySelector("#desktop-ad-slot"),
-  mobileAdSlot: document.querySelector("#mobile-ad-slot"),
-  mobileAdDismiss: document.querySelector("#mobile-ad-dismiss"),
-  resultsAdSlot: document.querySelector("#results-ad-slot"),
-  roundTransitionAdSlot: document.querySelector(".round-transition-ad-slot"),
   challengeDate: document.querySelector("#challenge-date"),
   challengeLabel: document.querySelector("#challenge-label"),
   todayNavButton: document.querySelector("#today-nav-button"),
@@ -99,6 +94,7 @@ const elements = {
   comparisonLabel: document.querySelector("#comparison-label"),
   roundScoreCount: document.querySelector("#round-score-count"),
   animeCards: document.querySelector("#anime-cards"),
+  animeReferences: document.querySelector("#anime-references"),
   requestError: document.querySelector("#request-error"),
   retryCompletionButton: document.querySelector("#retry-completion-button"),
   reviewButton: document.querySelector("#review-button"),
@@ -130,30 +126,6 @@ const elements = {
   landingStartButton: document.querySelector("#landing-start-button"),
 };
 
-function adScreenName(screen) {
-  if (screen === elements.landingScreen) return "landing";
-  if (screen === elements.gameScreen) return "game";
-  if (screen === elements.roundCompleteScreen) return "transition";
-  if (screen === elements.resultsScreen) return "results";
-  if (screen === elements.loadingScreen) return "loading";
-  if (screen === elements.errorScreen) return "error";
-  return "other";
-}
-
-function updateAdVisibility(screen) {
-  const showMobileAd = shouldShowMobileAd(
-    adScreenName(screen),
-    mobileAdDismissed,
-    PLAYTEST_MODE,
-  );
-  elements.mobileAdSlot.hidden = !showMobileAd;
-  document.body.classList.toggle("has-mobile-ad", showMobileAd);
-  elements.desktopAdSlot.hidden = PLAYTEST_MODE;
-  elements.roundTransitionAdSlot.hidden = PLAYTEST_MODE;
-  elements.resultsAdSlot.hidden =
-    PLAYTEST_MODE || state.playingArchivedChallenge;
-}
-
 function showScreen(screen) {
   state.visibleScreen = screen;
   if (
@@ -179,13 +151,6 @@ function showScreen(screen) {
   ]) {
     candidate.hidden = candidate !== screen;
   }
-  updateAdVisibility(screen);
-}
-
-function dismissMobileAd() {
-  mobileAdDismissed = true;
-  elements.mobileAdSlot.hidden = true;
-  document.body.classList.remove("has-mobile-ad");
 }
 
 function prefersReducedMotion() {
@@ -947,7 +912,27 @@ function renderComparison() {
     createAnimeCard(animePair[0]),
     createAnimeCard(animePair[1]),
   );
+  elements.animeReferences.replaceChildren();
+  elements.animeReferences.hidden = state.revealPhase !== "resolved";
+  if (!elements.animeReferences.hidden) {
+    for (const anime of animePair) {
+      const link = createMalReference(anime);
+      if (link) elements.animeReferences.append(link);
+    }
+  }
+}
 
+function createMalReference(anime) {
+  const url = malEntryUrl(anime.mal_id);
+  if (!url || anime.title === "Series representative unavailable") return null;
+  const link = document.createElement("a");
+  link.className = "mal-link";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = `${anime.title} ↗`;
+  link.setAttribute("aria-label", `${anime.title} on MyAnimeList (opens in a new tab)`);
+  return link;
 }
 
 function setChoicesDisabled(disabled) {
@@ -1070,6 +1055,8 @@ function prepareCarriedCard(card, anime) {
 async function animateToNextComparison() {
   const sequence = state.runSequence;
   state.transitioning = true;
+  elements.animeReferences.hidden = true;
+  elements.animeReferences.replaceChildren();
 
   const [leftCard, rightCard] = elements.animeCards.children;
   const leftRect = leftCard.getBoundingClientRect();
@@ -1200,7 +1187,9 @@ function makeReviewSide(anime, revealed, entry) {
   }
 
   const title = document.createElement("strong");
-  title.textContent = anime.title;
+  const reference = createMalReference(anime);
+  if (reference) title.append(reference);
+  else title.textContent = anime.title;
   const metric = document.createElement("span");
   metric.className = "review-metric";
   metric.textContent = formatReveal(entry.category, revealed);
@@ -1521,7 +1510,6 @@ elements.newPlaytestButton.addEventListener("click", () =>
 );
 elements.landingStartButton.addEventListener("click", startOrResumeTodayChallenge);
 elements.roundContinueButton.addEventListener("click", continueToNextRound);
-elements.mobileAdDismiss.addEventListener("click", dismissMobileAd);
 elements.todayNavButton.addEventListener("click", restoreTodayView);
 elements.archiveNavButton.addEventListener("click", () => loadArchive());
 elements.previousMonthButton.addEventListener("click", () => changeArchiveMonth(-1));
@@ -1557,4 +1545,6 @@ if (PLAYTEST_MODE) {
   elements.challengeLabel.classList.add("is-playtest");
 }
 
-loadChallenge(PLAYTEST_MODE ? "playtest" : "today");
+loadChallenge(PLAYTEST_MODE ? "playtest" : initialChallengeDate(
+  new URLSearchParams(window.location.search).get("date"), localDateString(),
+));

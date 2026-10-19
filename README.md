@@ -6,7 +6,11 @@ The long-term goal is to deliver one shared challenge each day, generated automa
 
 ## Current Status
 
-AniMoredle is in early development. Its gameplay, data pipeline, and supporting infrastructure are currently being designed and built.
+The current application includes a playable four-round web game, saved anonymous
+progress/results, and a playable archive. Public guides, historical recaps, and a
+private feedback submission system are also available. See [Public website operations](PUBLIC_SITE.md)
+for routes, feedback administration/retention, safe schema initialization, testing,
+and the owner’s Search Console/deployment checklist.
 
 ## Planned Features
 

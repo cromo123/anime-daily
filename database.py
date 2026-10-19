@@ -143,6 +143,24 @@ POSTGRES_CHALLENGE_MIGRATIONS = (
     "ALTER TABLE challenge_runs ADD COLUMN IF NOT EXISTS publication_state TEXT NOT NULL DEFAULT 'approved' CHECK (publication_state IN ('draft', 'approved'))",
 )
 
+CREATE_FEEDBACK_TABLE = """
+CREATE TABLE IF NOT EXISTS feedback_submissions (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('bug', 'feedback')),
+    message TEXT NOT NULL,
+    expected_behavior TEXT,
+    steps TEXT,
+    category TEXT,
+    challenge_date TEXT,
+    device_context TEXT,
+    email TEXT,
+    content_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS feedback_created_index
+ON feedback_submissions(created_at);
+"""
+
 POSTGRES_ANIME_MIGRATIONS = (
     "ALTER TABLE anime ADD COLUMN IF NOT EXISTS image_url TEXT",
     "ALTER TABLE anime ADD COLUMN IF NOT EXISTS relations_fetched INTEGER NOT NULL DEFAULT 0",
@@ -330,6 +348,7 @@ def _initialize_postgres(connection):
     for statement in POSTGRES_CHALLENGE_MIGRATIONS:
         connection.execute(statement)
     connection.executescript(CREATE_PLAYER_TABLES)
+    connection.executescript(CREATE_FEEDBACK_TABLE)
 
 
 def _initialize_sqlite(connection):
@@ -345,6 +364,7 @@ def _initialize_sqlite(connection):
             "ALTER TABLE challenge_runs ADD COLUMN publication_state TEXT NOT NULL DEFAULT 'approved'"
         )
     connection.executescript(CREATE_PLAYER_TABLES)
+    connection.executescript(CREATE_FEEDBACK_TABLE)
 
 
 def _parse_challenge_date(challenge_date):
@@ -1796,3 +1816,126 @@ def load_month_archive(
         connection.close()
 
     return [dict(row) for row in rows]
+
+
+def load_public_archive_records(before_date, minimum_date, database_path=DATABASE_PATH,
+                                limit=21, offset=0):
+    """Two bounded read queries; no player data or schema initialization."""
+    if not 1 <= limit <= 101 or offset < 0:
+        raise ValueError("Invalid archive page bounds.")
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        runs = connection.execute(
+            """
+            SELECT id, challenge_date, created_at, publication_state
+            FROM challenge_runs r
+            WHERE publication_state = 'approved'
+              AND challenge_date >= ? AND challenge_date < ?
+              AND (SELECT COUNT(*) FROM challenge_anime p
+                   WHERE p.challenge_id = r.id) = 24
+              AND (SELECT COUNT(DISTINCT category) FROM challenge_anime p
+                   WHERE p.challenge_id = r.id) = 4
+            ORDER BY challenge_date DESC LIMIT ? OFFSET ?
+            """,
+            (str(minimum_date), str(before_date), limit, offset),
+        ).fetchall()
+        if not runs:
+            return []
+        placeholders = ", ".join("?" for _ in runs)
+        placements = connection.execute(
+            f"""
+            SELECT p.challenge_id, p.category, p.position, a.*
+            FROM challenge_anime p JOIN anime a ON a.mal_id = p.mal_id
+            WHERE p.challenge_id IN ({placeholders})
+            ORDER BY p.challenge_id, p.category, p.position
+            """,
+            tuple(row["id"] for row in runs),
+        ).fetchall()
+        by_id = {row["id"]: {**dict(row), "placements": []} for row in runs}
+        for placement in placements:
+            by_id[placement["challenge_id"]]["placements"].append(dict(placement))
+        return list(by_id.values())
+    finally:
+        connection.close()
+
+
+def save_feedback_submission(submission, content_hash, database_path=DATABASE_PATH):
+    """An opaque submission ID makes retries idempotent, including after restart."""
+    initialize_database(database_path)
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    fields = ("id", "kind", "message", "expected_behavior", "steps", "category",
+              "challenge_date", "device_context", "email")
+    values = [submission.get(field) for field in fields]
+    values.extend((content_hash, datetime.now(timezone.utc).isoformat()))
+    try:
+        cursor = connection.execute(
+            """
+            INSERT INTO feedback_submissions
+                (id, kind, message, expected_behavior, steps, category,
+                 challenge_date, device_context, email, content_hash, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """,
+            tuple(values),
+        )
+        existing = connection.execute(
+            "SELECT content_hash FROM feedback_submissions WHERE id = ?",
+            (submission["id"],),
+        ).fetchone()
+        if existing["content_hash"] != content_hash:
+            raise ValueError("This submission ID was already used for different content.")
+        connection.commit()
+        return cursor.rowcount == 1
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def load_feedback_submissions(database_path=DATABASE_PATH, limit=100, kind=None,
+                              submission_id=None):
+    """Administrative access requires database/file credentials; never an HTTP API."""
+    if not 1 <= limit <= 1000 or kind not in (None, "bug", "feedback"):
+        raise ValueError("Invalid feedback filter.")
+    connection = _connect_database(database_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        sql = "SELECT * FROM feedback_submissions WHERE 1=1"
+        parameters = []
+        if kind:
+            sql += " AND kind = ?"
+            parameters.append(kind)
+        if submission_id:
+            sql += " AND id = ?"
+            parameters.append(submission_id)
+        sql += " ORDER BY created_at DESC, id LIMIT ?"
+        parameters.append(limit)
+        return [dict(row) for row in connection.execute(sql, tuple(parameters)).fetchall()]
+    finally:
+        connection.close()
+
+
+def prune_feedback_submissions(before_timestamp, database_path=DATABASE_PATH,
+                               apply=False):
+    """Preview by default. Only feedback is affected when explicitly applied."""
+    connection = _connect_database(database_path)
+    try:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM feedback_submissions WHERE created_at < ?",
+            (before_timestamp,),
+        ).fetchone()[0]
+        if apply:
+            connection.execute(
+                "DELETE FROM feedback_submissions WHERE created_at < ?",
+                (before_timestamp,),
+            )
+            connection.commit()
+        return count
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-adsense-account" content="ca-pub-7045982233365027">
+  <title>Data and Methodology | AniMoredle</title>
+  <meta name="description" content="How AniMoredle uses MyAnimeList data, deterministic validation, series relationships, and editorial curation.">
+  <link rel="canonical" href="https://animoredle.com/methodology">
+  <link rel="stylesheet" href="/static/styles.css?v=public-site-1">
+</head>
+<body class="information-page">
+  <div class="page-glow" aria-hidden="true"></div>
+  <main class="information-shell">
+    <header class="information-header">
+      <a class="brand" href="/" aria-label="AniMoredle home"><span class="brand-mark" aria-hidden="true">AN</span><span>AniMoredle</span></a>
+      <a class="information-home-link" href="/">Play today’s challenge</a>
+    </header>
+    <article class="information-card">
+<p class="eyebrow">The facts behind the game</p><h1>Data and Methodology</h1>
+<p>AniMoredle is an independent game using structured anime data from the <a href="https://myanimelist.net/" target="_blank" rel="noopener noreferrer">MyAnimeList website ↗</a> and its official API. It is not an official MyAnimeList product.</p>
+<h2>A stored catalog, rather than live lookups</h2>
+<p>Anime scores, membership counts, episode counts, release dates, media types, and cover references are imported into a local catalog. Gameplay reads that catalog; it does not request fresh MAL data after each choice. Numbers may therefore differ from the MAL page you visit later.</p>
+<p>Catalog refreshes can update values, but there is no guaranteed live refresh interval. User scores and membership counts change, and ongoing series may gain episodes or corrected release information. Historical recap values and correct choices reflect the catalog currently stored, rather than an immutable snapshot of MAL on that historical date. Community percentages reflect the correctness recorded for original official answers; those statistics are not re-scored when the catalog changes.</p>
+<h2>Selection and factual validation have different jobs</h2>
+<p>Candidate lineups favor recognizable anime, with room for less familiar picks. Recent use in the same category and recent exact matchups are checked to keep days varied. A challenge uses 24 distinct MAL entries across four rounds.</p>
+<p>Automated editorial agents can suggest a balance of familiarity, difficulty, and release eras, then choose a lineup from valid candidates. They do not supply numerical answers. Python compares the structured values and requires both values to be present and unequal for every adjacent matchup. A tie or missing comparison value cannot be an accepted question.</p>
+<h2>Entries and connected series</h2>
+<p><a href="/guides/higher-score">Score</a>, <a href="/guides/more-popular">popularity</a>, and <a href="/guides/more-recent">recency</a> belong to the particular MAL entry shown. Different seasons can have different values.</p>
+<p><a href="/guides/more-episodes">More Episodes</a> is the exception. It uses a connected mainline series total while showing a verified first-released episodic representative. Only prequel/sequel relationships define that connection; title similarity does not.</p>
+<h2>Limitations and corrections</h2>
+<p>MAL’s relationships and missing metadata affect what can be established reliably. Incomplete or cyclic representative graphs are excluded from More Episodes selection. Unknown episode counts are not invented, and series totals can lag new releases. This is a factual comparison game built on a catalog, not a judgment of an anime’s artistic quality.</p>
+<p>If you find a mismatch, <a href="/feedback">report the entry, category, challenge date, and what looks wrong</a>. A link to the relevant MAL entry helps identify the issue without relying on similarly named seasons.</p>
+    </article>
+  </main>
+  <footer class="site-footer"><nav aria-label="Site information">
+<a href="/how-to-play">How to Play</a><a href="/methodology">Methodology</a>
+<a href="/past-challenges">Past Challenges</a><a href="/faq">FAQ</a>
+<a href="/feedback">Feedback</a><a href="/about">About</a>
+<a href="/privacy">Privacy</a><a href="/contact">Contact</a>
+</nav></footer>
+</body>
+</html>

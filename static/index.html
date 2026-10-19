@@ -6,12 +6,13 @@
     <meta name="google-adsense-account" content="ca-pub-7045982233365027">
     <meta
       name="description"
-      content="AniMoredle — four categories, twenty daily anime comparisons."
+      content="Play AniMoredle: 20 daily anime comparisons across score, popularity, full-series episodes, and release dates. Explore guides and past challenges."
     >
-    <title>AniMoredle</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/challenge_state.js" defer></script>
-    <script src="/static/game.js" defer></script>
+    <title>AniMoredle — Daily Anime Comparison Game</title>
+    <link rel="canonical" href="https://animoredle.com/">
+    <link rel="stylesheet" href="/static/styles.css?v=public-site-1">
+    <script src="/static/challenge_state.js?v=ad-free-1" defer></script>
+    <script src="/static/game.js?v=ad-free-1" defer></script>
   </head>
   <body>
     <div class="page-glow" aria-hidden="true"></div>
@@ -53,6 +54,7 @@
         <button id="retry-load-button" class="primary-button" type="button">
           Try again
         </button>
+        <p><a class="help-link" href="/feedback">Report a loading problem</a> · <a class="help-link" href="/how-to-play">How to Play</a></p>
       </section>
 
       <section id="landing-screen" class="landing-screen" hidden>
@@ -111,10 +113,6 @@
             <p id="next-category-question">Which anime is more popular?</p>
           </div>
 
-          <aside class="round-transition-ad-slot" aria-label="Advertisement placeholder">
-            <span>ADVERTISEMENT</span>
-          </aside>
-
           <button id="round-continue-button" class="primary-button" type="button">
             Continue to More Popular
           </button>
@@ -143,6 +141,7 @@
           Comparison 1 of 5
         </p>
         <div id="anime-cards" class="anime-grid" aria-live="polite"></div>
+        <nav id="anime-references" class="anime-references" aria-label="Revealed anime references" hidden></nav>
 
         <p id="request-error" class="request-error" role="alert" hidden></p>
         <button id="retry-completion-button" class="secondary-button retry-completion" type="button" hidden>
@@ -162,9 +161,6 @@
         <p id="results-copy" class="results-copy">
           Come back tomorrow for a new set, or replay today’s exact challenge.
         </p>
-        <aside id="results-ad-slot" class="results-ad-slot" aria-label="Advertisement placeholder">
-          <span>ADVERTISEMENT</span>
-        </aside>
         <div class="result-actions">
           <button id="review-button" class="secondary-button" type="button">
             Breakdown
@@ -251,21 +247,38 @@
       </noscript>
     </main>
 
+    <section class="site-introduction" aria-labelledby="site-introduction-title">
+      <p class="eyebrow">An anime game worth thinking twice about</p>
+      <h2 id="site-introduction-title">How well do you know your anime?</h2>
+      <p>AniMoredle is a daily “more or less” game: choose which of two anime has the higher value, then see the factual result. Familiar favorites meet unexpected challengers across four rounds and 20 comparisons.</p>
+      <div class="content-grid">
+        <section><h3>Four ways to compare</h3><ul>
+          <li><a href="/guides/higher-score">Higher Score</a> — a specific entry’s MAL user score.</li>
+          <li><a href="/guides/more-popular">More Popular</a> — its member/list-user count, with rank revealed too.</li>
+          <li><a href="/guides/more-episodes">More Episodes</a> — the full connected mainline series total.</li>
+          <li><a href="/guides/more-recent">More Recent</a> — its complete start/release date.</li>
+        </ul></section>
+        <section><h3>One point, then a new challenger</h3>
+          <p>Each correct answer earns one point, up to 20. The right-hand anime carries into the next matchup with its revealed value visible. Your first official completion is saved; later replays do not replace it.</p>
+          <p>Today follows your browser’s local date, with a new challenge when that day is published. The playable Archive holds available earlier days.</p>
+        </section>
+      </div>
+      <p>A sequel can have a different score or audience from the original. A familiar franchise can have a surprisingly recent entry. More Episodes deliberately asks a different question: how long is the connected series? These distinctions make the comparisons more than a test of title recognition.</p>
+      <p><a href="/how-to-play">Learn how to play</a>, explore <a href="/past-challenges">past challenge recaps</a>, or see <a href="/methodology">where the numbers come from</a>. AniMoredle is independent of MyAnimeList.</p>
+    </section>
+
     <footer class="site-footer">
       <nav aria-label="Site information">
+        <a href="/how-to-play">How to Play</a>
+        <a href="/methodology">Methodology</a>
+        <a href="/past-challenges">Past Challenges</a>
+        <a href="/faq">FAQ</a>
+        <a href="/feedback">Feedback</a>
         <a href="/about">About</a>
         <a href="/privacy">Privacy</a>
         <a href="/contact">Contact</a>
       </nav>
     </footer>
 
-    <aside id="desktop-ad-slot" class="desktop-ad-rail" aria-label="Advertisement placeholder">
-      <span>ADVERTISEMENT</span>
-    </aside>
-
-    <aside id="mobile-ad-slot" class="mobile-ad-slot" aria-label="Advertisement placeholder" hidden>
-      <span>ADVERTISEMENT</span>
-      <button id="mobile-ad-dismiss" type="button" aria-label="Dismiss advertisement">×</button>
-    </aside>
   </body>
 </html>

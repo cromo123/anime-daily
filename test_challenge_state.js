@@ -8,10 +8,11 @@ const {
   dailyChallengeButtonLabel,
   findResumePosition,
   isPublicHistoryDate,
+  initialChallengeDate,
+  malEntryUrl,
   prepareNextRound,
   responseMatchesRequest,
   roundTransitionDetails,
-  shouldShowMobileAd,
   shouldShowTodayLanding,
 } = require("./static/challenge_state.js");
 
@@ -224,15 +225,14 @@ assert.equal(roundTransitionDetails(today, 1, 3, 5).nextCategory, "More Episodes
 assert.equal(roundTransitionDetails(today, 2, 5, 5).nextCategory, "More Recent");
 assert.equal(roundTransitionDetails(today, 3, 5, 5), null);
 
-assert.equal(shouldShowMobileAd("landing", false, false), true);
-assert.equal(shouldShowMobileAd("game", false, false), true);
-assert.equal(shouldShowMobileAd("transition", false, false), false);
-assert.equal(shouldShowMobileAd("results", false, false), false);
-assert.equal(shouldShowMobileAd("loading", false, false), false);
-assert.equal(shouldShowMobileAd("error", false, false), false);
-assert.equal(shouldShowMobileAd("archive", false, false), false);
-assert.equal(shouldShowMobileAd("landing", true, false), false);
-assert.equal(shouldShowMobileAd("game", false, true), false);
+assert.equal(malEntryUrl(5081), "https://myanimelist.net/anime/5081");
+for (const invalid of [null, undefined, 0, -1, true, "5081", 1.5, Infinity]) {
+  assert.equal(malEntryUrl(invalid), null);
+}
+assert.equal(initialChallengeDate("2026-09-20", "2026-09-23"), "2026-09-20");
+for (const invalid of [null, "2026-09-24", "2026-02-30", "not-a-date"]) {
+  assert.equal(initialChallengeDate(invalid, "2026-09-23"), "today");
+}
 
 const completedFirstRound = Array.from({ length: 5 }, (_, index) => ({
   category: "Higher Score",

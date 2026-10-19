@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-adsense-account" content="ca-pub-7045982233365027">
+  <title>Feedback and Bug Reports | AniMoredle</title>
+  <meta name="description" content="Privately report an AniMoredle bug, flag incorrect anime data, or suggest a feature. No account required.">
+  <link rel="canonical" href="https://animoredle.com/feedback">
+  <link rel="stylesheet" href="/static/styles.css?v=public-site-1">
+  <script src="/static/feedback.js" defer></script>
+</head>
+<body class="information-page">
+  <div class="page-glow" aria-hidden="true"></div>
+  <main class="information-shell">
+    <header class="information-header">
+      <a class="brand" href="/" aria-label="AniMoredle home"><span class="brand-mark" aria-hidden="true">AN</span><span>AniMoredle</span></a>
+      <a class="information-home-link" href="/">Play today’s challenge</a>
+    </header>
+    <article class="information-card">
+      <p class="eyebrow">Help improve the game</p><h1>Feedback</h1>
+      <p>Found a bug, a confusing comparison, or something you would like to see? Send a private report. You do not need an account or an email address.</p>
+      <p>For incorrect anime data, include the title or MAL ID, category, and challenge date. A specific example helps distinguish a season’s value from a connected series total. Please avoid passwords, account details, or other sensitive information.</p>
+      <form id="feedback-form" class="feedback-form">
+        <fieldset class="feedback-kind"><legend>What would you like to send?</legend>
+          <label><input type="radio" name="kind" value="bug" checked> Report a Bug</label>
+          <label><input type="radio" name="kind" value="feedback"> Send Feedback / Suggest a Feature</label>
+        </fieldset>
+        <label for="feedback-message">Description or message (required)</label>
+        <textarea id="feedback-message" name="message" minlength="10" maxlength="5000" rows="6" required aria-describedby="message-hint"></textarea>
+        <small id="message-hint">10–5,000 characters. What happened, or what would make the game better?</small>
+        <div id="bug-fields" class="feedback-fields">
+          <label for="expected-behavior">Expected behavior (optional)</label>
+          <textarea id="expected-behavior" name="expected_behavior" maxlength="1500" rows="3"></textarea>
+          <label for="reproduction-steps">Steps to reproduce (optional)</label>
+          <textarea id="reproduction-steps" name="steps" maxlength="2000" rows="3"></textarea>
+          <label for="bug-category">Relevant category (optional)</label>
+          <select id="bug-category" name="bug_category"><option value="">Not category-specific</option><option>Higher Score</option><option>More Popular</option><option>More Episodes</option><option>More Recent</option></select>
+          <label for="feedback-date">Challenge date (optional)</label>
+          <input id="feedback-date" name="challenge_date" type="date">
+          <label for="device-context">Device/browser (optional)</label>
+          <input id="device-context" name="device_context" maxlength="160" placeholder="For example: Android, Chrome; or Windows, Firefox">
+        </div>
+        <div id="general-fields" class="feedback-fields" hidden>
+          <label for="feedback-category">Feedback category</label>
+          <select id="feedback-category" name="feedback_category"><option>Suggestion</option><option>Content or data</option><option>Accessibility</option><option>Other</option></select>
+        </div>
+        <label for="feedback-email">Email for follow-up (optional)</label>
+        <input id="feedback-email" name="email" type="email" maxlength="254" autocomplete="email">
+        <div class="feedback-honeypot" aria-hidden="true"><label for="feedback-website">Leave this blank</label><input id="feedback-website" name="website" tabindex="-1" autocomplete="off" maxlength="200"></div>
+        <p class="feedback-privacy">Reports are stored privately for review, not automatically emailed or posted publicly. See our <a href="/privacy">Privacy Policy</a>. For direct email, use <a href="mailto:contact@animoredle.com">contact@animoredle.com</a>.</p>
+        <p id="feedback-status" role="status" aria-live="polite" tabindex="-1" hidden></p>
+        <button id="feedback-submit" class="primary-button" type="submit">Send report</button>
+      </form>
+      <noscript><p>The submission form needs JavaScript. You can still contact <a href="mailto:contact@animoredle.com">contact@animoredle.com</a>.</p></noscript>
+    </article>
+  </main>
+  <footer class="site-footer"><nav aria-label="Site information">
+    <a href="/how-to-play">How to Play</a><a href="/methodology">Methodology</a><a href="/past-challenges">Past Challenges</a><a href="/faq">FAQ</a>
+    <a href="/feedback" aria-current="page">Feedback</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a>
+  </nav></footer>
+</body>
+</html>

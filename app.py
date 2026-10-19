@@ -1,14 +1,21 @@
 import os
+import logging
 import re
 import secrets
+import traceback
 from calendar import month_name, monthrange
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from xml.etree.ElementTree import Element, SubElement, tostring
+
+from feedback import FeedbackRateLimiter, receive_feedback
+from public_pages import (SITE_URL, STATIC_PAGES, archive_detail, archive_index,
+                          available_historical_challenges, document, historical_cutoff)
 
 from challenge import (
     CATEGORY_RULES,
@@ -32,6 +39,7 @@ from database import (
     load_player_result_standing,
     record_player_answer,
     record_player_result,
+    load_public_archive_records,
 )
 
 
@@ -55,7 +63,36 @@ app = FastAPI(title="AniMoredle")
 app.state.database_path = DATABASE_PATH
 app.state.player_cookie_secure = PLAYER_COOKIE_SECURE
 app.state.playtest = None
+app.state.feedback_limiter = FeedbackRateLimiter()
 app.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")
+logger = logging.getLogger(__name__)
+
+
+def log_archive_failure(error, challenge_date=None):
+    """Log location/type, never exception text, SQL parameters, or connection URLs."""
+    state = getattr(error, "sqlstate", None)
+    sqlstate = state if isinstance(state, str) and re.fullmatch(r"[0-9A-Z]{5}", state) else "-"
+    frames = " > ".join(
+        f"{Path(frame.filename).name}:{frame.name}:{frame.lineno}"
+        for frame in traceback.extract_tb(error.__traceback__)[-5:]
+    )
+    reference = secrets.token_hex(8)
+    logger.error("Public archive failure ref=%s date=%s type=%s sqlstate=%s frames=%s",
+                 reference, challenge_date or "index", type(error).__name__, sqlstate, frames)
+    return reference
+
+
+@app.middleware("http")
+async def indexing_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if (path.startswith(("/challenge/", "/player/", "/dev/"))
+            or path in {"/archive", "/feedback/submit", "/docs", "/redoc", "/openapi.json"}
+            or path.startswith("/static/") and path.endswith(".html")
+            or path == "/" and ("date" in request.query_params or "playtest" in request.query_params)
+            or response.status_code >= 400):
+        response.headers["X-Robots-Tag"] = "noindex"
+    return response
 
 
 class AnswerRequest(BaseModel):
@@ -344,6 +381,92 @@ def contact_page():
 @app.get("/ads.txt", include_in_schema=False)
 def ads_txt():
     return FileResponse(STATIC_DIRECTORY / "ads.txt", media_type="text/plain")
+
+
+@app.get("/how-to-play", include_in_schema=False)
+@app.get("/methodology", include_in_schema=False)
+@app.get("/faq", include_in_schema=False)
+@app.get("/feedback", include_in_schema=False)
+@app.get("/guides/higher-score", include_in_schema=False)
+@app.get("/guides/more-popular", include_in_schema=False)
+@app.get("/guides/more-episodes", include_in_schema=False)
+@app.get("/guides/more-recent", include_in_schema=False)
+def information_page(request: Request):
+    return FileResponse(STATIC_DIRECTORY / STATIC_PAGES[request.url.path], media_type="text/html")
+
+
+@app.post("/feedback/submit", include_in_schema=False)
+async def submit_feedback(request: Request):
+    return await receive_feedback(request)
+
+
+@app.get("/past-challenges", response_class=HTMLResponse, include_in_schema=False)
+def past_challenges(page: int = Query(default=1, ge=1, le=1000)):
+    try:
+        return HTMLResponse(archive_index(app.state.database_path, PUBLIC_ARCHIVE_CUTOFF, page))
+    except Exception as error:
+        log_archive_failure(error)
+        return HTMLResponse(document(
+            "Past challenges unavailable", "The historical archive is temporarily unavailable.",
+            "/past-challenges", '<h1>Past challenges are temporarily unavailable</h1>'
+            '<p>Please try again later, or <a href="/">return to the game</a>.</p>', True,
+        ), status_code=503)
+
+
+@app.get("/past-challenges/{challenge_date}", response_class=HTMLResponse, include_in_schema=False)
+def past_challenge(challenge_date: str):
+    try:
+        requested = date.fromisoformat(challenge_date)
+        if requested.isoformat() != challenge_date:
+            raise ValueError("Invalid date")
+    except ValueError:
+        requested = None
+    try:
+        html = archive_detail(requested, app.state.database_path, PUBLIC_ARCHIVE_CUTOFF) if requested else None
+    except Exception as error:
+        reference = log_archive_failure(error, requested.isoformat() if requested else None)
+        return HTMLResponse(document(
+            "Challenge recap temporarily unavailable", "This historical recap is temporarily unavailable.",
+            "/past-challenges", '<h1>This recap is temporarily unavailable</h1>'
+            '<p>Please try again later. This is a temporary service problem, not a missing challenge.</p>'
+            f'<p>Reference: {reference}. <a href="/feedback">Report a problem</a>.</p>', True,
+        ), status_code=503, headers={"Retry-After": "60"})
+    if html is None:
+        return HTMLResponse(document(
+            "Challenge recap unavailable", "This historical challenge recap is not available.",
+            "/past-challenges", '<h1>This recap is not available</h1>'
+            '<p>Recaps are published only for available past challenges after the day has ended worldwide. '
+            '<a href="/past-challenges">Browse published days</a> or <a href="/">play today</a>.</p>', True,
+        ), status_code=404)
+    return HTMLResponse(html)
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt():
+    return Response(
+        "User-agent: *\nAllow: /\nDisallow: /challenge/\nDisallow: /archive\n"
+        "Disallow: /player/\nDisallow: /dev/\nDisallow: /feedback/submit\n"
+        "Disallow: /docs\nDisallow: /redoc\nDisallow: /openapi.json\n"
+        f"Sitemap: {SITE_URL}/sitemap.xml\n", media_type="text/plain",
+    )
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml():
+    paths = [*STATIC_PAGES, "/past-challenges"]
+    try:
+        records = load_public_archive_records(historical_cutoff(), PUBLIC_ARCHIVE_CUTOFF,
+                                              app.state.database_path, limit=100)
+        valid = available_historical_challenges(records, app.state.database_path)
+        for record, _ in valid:
+            paths.append(f'/past-challenges/{record["challenge_date"]}')
+    except Exception:
+        # Static content remains discoverable during a database outage.
+        pass
+    root = Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    for path in paths:
+        SubElement(SubElement(root, "url"), "loc").text = SITE_URL + path
+    return Response(tostring(root, encoding="utf-8", xml_declaration=True), media_type="application/xml")
 
 
 @app.get("/health")
